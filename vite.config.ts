@@ -9,7 +9,7 @@ export default defineConfig({
 		lib: {
 			entry: [
 				resolve(__dirname, 'src/index.ts'),
-				resolve(__dirname, 'src/common/index.ts'),
+				resolve(__dirname, 'src/common/common.ts'),
 			],
 			formats: ['es', 'cjs'],
 		},
