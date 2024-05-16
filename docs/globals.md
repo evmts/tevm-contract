@@ -1,12 +1,10 @@
-**@tevm/contract** ∙ [README](README.md) ∙ [API](API.md)
+[**@tevm/contract**](README.md) • **Docs**
 
 ***
 
-# API
+# @tevm/contract
 
-## Exports
-
-### Type Aliases
+## Type Aliases
 
 - [Contract](type-aliases/Contract.md)
 - [CreateContract](type-aliases/CreateContract.md)
@@ -20,10 +18,7 @@
 - [ValueOf](type-aliases/ValueOf.md)
 - [WriteActionCreator](type-aliases/WriteActionCreator.md)
 
-### Functions
+## Functions
 
 - [createContract](functions/createContract.md)
 - [createScript](functions/createScript.md)
-
-***
-Generated using [typedoc-plugin-markdown](https://www.npmjs.com/package/typedoc-plugin-markdown) and [TypeDoc](https://typedoc.org/)
