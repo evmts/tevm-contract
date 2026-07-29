@@ -1,20 +1,5 @@
 import type { ReactNode } from 'react'
 
-const KEYWORDS = new Set([
-	'import',
-	'from',
-	'export',
-	'const',
-	'let',
-	'var',
-	'return',
-	'new',
-	'async',
-	'await',
-	'function',
-	'type',
-])
-
 const TOKEN_RE =
 	/(\/\/.*$)|('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")|\b(0x[0-9a-fA-F…]+|\d[\d_]*)\b|\b(import|from|export|const|let|var|return|new|async|await|function|type)\b|([A-Za-z_$][\w$]*)(?=\s*\()|([A-Za-z_$][\w$]*)(?=\s*:)/gm
 
