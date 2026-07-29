@@ -1,19 +1,36 @@
 {
-	"extends": "@tevm/tsconfig/base.json",
+	"$schema": "https://json.schemastore.org/tsconfig",
 	"compilerOptions": {
-		"plugins": [
-			{
-				"name": "@evmts/ts-plugin"
-			}
-		],
+		"target": "ESNext",
+		"lib": ["ESNext"],
+		"ignoreDeprecations": "6.0",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 		"rootDir": "src",
 		"outDir": "types",
+		"declaration": true,
+		"declarationMap": true,
+		"allowJs": true,
+		"checkJs": true,
+		"isolatedModules": true,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"alwaysStrict": true,
+		"exactOptionalPropertyTypes": true,
+		"forceConsistentCasingInFileNames": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedIndexedAccess": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"skipLibCheck": true,
-		"types": ["bun-types"],
-		// this should be "Bundler" but don't want to fight a broken type
-		"moduleResolution": "NodeNext",
-		"module": "NodeNext"
+		"strict": true,
+		"verbatimModuleSyntax": true
 	},
-	"include": ["src", "src/**/*.json", "**/*.sol"],
+	"include": ["src", "src/**/*.json"],
 	"exclude": ["src/common/**/*"]
 }

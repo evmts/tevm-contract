@@ -329,12 +329,11 @@ describe(createContract.name, () => {
 	})
 
 	it('should throw if no abi or humanReadableAbi is provided', () => {
-		expect(() => createContract({ name: 'ContractWithConstructor' } as any)).toThrowErrorMatchingInlineSnapshot(`
-			[InvalidParams: Must provide either humanReadableAbi or abi
-
-			Docs: https://tevm.sh/learn/contracts/
-			Version: 1.0.0-next.148]
-		`)
+		// The published @tevm/errors package appends its own version to the message,
+		// so assert the stable contract instead of coupling this package to that version.
+		expect(() => createContract({ name: 'ContractWithConstructor' } as any)).toThrow(
+			'Must provide either humanReadableAbi or abi',
+		)
 	})
 
 	it('should optionally take an abi rather than a humanReadableAbi', () => {
