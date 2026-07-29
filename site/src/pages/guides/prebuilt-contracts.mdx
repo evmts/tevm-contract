@@ -1,0 +1,205 @@
+---
+title: Prebuilt contracts
+description: SimpleContract, ERC20, ERC721, ErrorContract and AdvancedContract ship with real compiled bytecode.
+---
+
+# Prebuilt contracts
+
+`@tevm/contract` ships five ready-made contracts, each with **real compiled bytecode**. They
+exist so tests and examples do not need a Solidity toolchain: import one, deploy it, and you
+have a working contract in a few lines.
+
+```ts
+import {
+  SimpleContract,
+  ERC20,
+  ERC721,
+  ErrorContract,
+  AdvancedContract,
+} from '@tevm/contract'
+```
+
+Each is a plain [`Contract`](/api/contract) with `bytecode` and `deployedBytecode` populated, so
+`deploy()` works out of the box and `withCode(...)`/`tevmSetAccount` can seed state directly.
+
+## `SimpleContract`
+
+A counter. The smallest useful thing that has storage, a getter, a setter, and an event.
+
+```solidity
+constructor(uint256 initialValue)
+function get() view returns (uint256)
+function set(uint256 newValue)
+event ValueSet(uint256 newValue)
+```
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const result = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...SimpleContract.deploy(42n),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!result.createdAddress) throw new Error('deployment failed')
+const counter = SimpleContract.withAddress(result.createdAddress)
+
+console.log((await client.tevmContract(counter.read.get())).data) // 42n
+```
+
+## `ERC20`
+
+The OpenZeppelin ERC-20 implementation (internally named `OzERC20`), including the full set of
+OZ custom errors.
+
+```solidity
+constructor(string name, string symbol)
+function name() view returns (string)
+function symbol() view returns (string)
+function decimals() view returns (uint8)
+function totalSupply() view returns (uint256)
+function balanceOf(address account) view returns (uint256)
+function allowance(address owner, address spender) view returns (uint256)
+function approve(address spender, uint256 value) returns (bool)
+function transfer(address to, uint256 value) returns (bool)
+function transferFrom(address from, address to, uint256 value) returns (bool)
+event Transfer(address indexed from, address indexed to, uint256 value)
+event Approval(address indexed owner, address indexed spender, uint256 value)
+error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)
+error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)
+// … and the four ERC20Invalid* errors
+```
+
+Because the custom errors are in the ABI, they are attached to every action, so a failing
+transfer decodes to a named error instead of raw revert bytes.
+
+The most common use is not deploying it at all, but as a *typed handle onto an existing token*:
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createPublicClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http('https://ethereum-rpc.publicnode.com'),
+})
+
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+
+console.log(await client.readContract(Dai.read.symbol())) // 'DAI'
+```
+
+## `ERC721`
+
+The OpenZeppelin ERC-721 implementation (internally named `OzERC721`), with the OZ ERC-721
+custom errors. Same shape as `ERC20` — `constructor(string name, string symbol)`, the standard
+NFT surface, and `Transfer`/`Approval`/`ApprovalForAll` events.
+
+## `ErrorContract`
+
+Every revert flavour the EVM can produce, each behind a zero-argument function. Use it to
+exercise error decoding and error-handling paths.
+
+```solidity
+error SimpleError()
+error ErrorWithSingleParam(uint256 amount)
+error ErrorWithMultipleParams(string message, bytes32 hash, address[] users)
+
+function revertWithSimpleCustomError()
+function revertWithCustomErrorSingleParam()
+function revertWithCustomErrorMultipleParams()
+function revertWithStringError()
+function revertWithRequireAndMessage()
+function revertWithRequireNoMessage()
+function revertWithoutMessage()
+function panicWithAssertFailure()
+function panicWithArithmeticOverflow()
+function panicWithDivisionByZero()
+function panicWithArrayOutOfBounds()
+function errorOutOfGas()
+function errorWithInvalidOpcode()
+```
+
+```ts
+import { ErrorContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const result = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...ErrorContract.deploy(),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!result.createdAddress) throw new Error('deployment failed')
+const errors = ErrorContract.withAddress(result.createdAddress)
+
+const failed = await client.tevmContract({
+  ...errors.write.revertWithCustomErrorSingleParam(),
+  from: PREFUNDED_ACCOUNTS[0].address,
+  throwOnFail: false,
+})
+
+console.log(failed.errors?.[0]?.message)
+```
+
+## `AdvancedContract`
+
+Multiple storage types, an external call, and a `delegatecall` — for exercising call tracing,
+opcode hooks, and multi-type ABI encoding. Its constructor deploys a helper contract as a side
+effect, so it also covers contract-creation-during-construction.
+
+```solidity
+constructor(uint256 initialNumber, bool initialBool, string initialString, address initialAddress)
+
+function getNumber() view returns (uint256)
+function getBool() view returns (bool)
+function getString() view returns (string)
+function getAddress() view returns (address)
+function getAllValues() view returns (uint256, bool, string, address)
+function setNumber(uint256 newValue)
+function setBool(bool newValue)
+function setString(string newValue)
+function setAddress(address newValue)
+function setAllValues(uint256 newNumber, bool newBool, string newString, address newAddress)
+function callMathHelper(uint256 value) returns (uint256)
+function delegateCallMathHelper(uint256 value) returns (uint256)
+function mathHelperAddress() view returns (address)
+```
+
+```ts
+import { AdvancedContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const result = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...AdvancedContract.deploy(1n, true, 'hello', PREFUNDED_ACCOUNTS[0].address),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!result.createdAddress) throw new Error('deployment failed')
+const advanced = AdvancedContract.withAddress(result.createdAddress)
+
+const { data } = await client.tevmContract(advanced.read.getAllValues())
+console.log(data) // [1n, true, 'hello', '0xf39F…2266']
+```
+
+## A note on addresses
+
+None of these ship with an `address` — they are shapes, not deployments. Always
+[`withAddress(...)`](/api/contract#withaddress) before using their action creators against a
+live contract.

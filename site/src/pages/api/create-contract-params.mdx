@@ -1,0 +1,138 @@
+---
+title: CreateContractParams
+description: API reference for the CreateContractParams type.
+---
+
+# `CreateContractParams`
+
+```ts
+import type { CreateContractParams } from '@tevm/contract'
+```
+
+The parameter type of [`createContract`](/api/create-contract). It is a **union of two
+variants** — one taking `humanReadableAbi`, one taking `abi` — which is how the two forms are
+kept mutually exclusive at the type level.
+
+## Type parameters
+
+```ts
+type CreateContractParams<
+  TName extends string | undefined | never,
+  TAbi extends readonly string[] | Abi,
+  TAddress extends undefined | Address | never,
+  TBytecode extends undefined | Hex | never,
+  TDeployedBytecode extends undefined | Hex | never,
+  TCode extends undefined | Hex | never,
+>
+```
+
+## The two variants
+
+```ts
+// Variant 1 — human-readable ABI
+{
+  name?: TName
+  humanReadableAbi: TAbi extends readonly string[] ? TAbi : FormatAbi<TAbi>
+  abi?: never
+  address?: TAddress
+  bytecode?: TBytecode
+  deployedBytecode?: TDeployedBytecode
+  code?: TCode
+}
+
+// Variant 2 — JSON ABI
+{
+  name?: TName
+  humanReadableAbi?: never
+  abi: TAbi extends readonly string[] ? ParseAbi<TAbi> : TAbi extends Abi ? TAbi : never
+  address?: TAddress
+  bytecode?: TBytecode
+  deployedBytecode?: TDeployedBytecode
+  code?: TCode
+}
+```
+
+The `?: never` on the unused field is what makes supplying both a compile error.
+
+## Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | Optional contract name. Informational. |
+| `humanReadableAbi` | `readonly string[]` | Human-readable ABI. Required in variant 1. |
+| `abi` | `Abi` | JSON ABI. Required in variant 2. |
+| `address` | `Address` | Optional deployed address. Checksummed on the way in. |
+| `bytecode` | `Hex` | Optional creation bytecode. Required for `deploy()`. |
+| `deployedBytecode` | `Hex` | Optional runtime bytecode as compiled. |
+| `code` | `Hex` | Optional runtime bytecode for this instance. |
+
+## Examples
+
+### Human-readable ABI
+
+```ts
+import { createContract, type CreateContractParams } from '@tevm/contract'
+
+const params = {
+  name: 'ERC20',
+  humanReadableAbi: [
+    'function balanceOf(address owner) view returns (uint256)',
+    'function transfer(address to, uint256 amount) returns (bool)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+} as const satisfies CreateContractParams<
+  'ERC20',
+  readonly string[],
+  `0x${string}`,
+  undefined,
+  undefined,
+  undefined
+>
+
+const contract = createContract(params)
+```
+
+### JSON ABI
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const contract = createContract({
+  name: 'ERC20',
+  abi: [
+    {
+      type: 'function',
+      name: 'balanceOf',
+      inputs: [{ name: 'owner', type: 'address' }],
+      outputs: [{ type: 'uint256' }],
+      stateMutability: 'view',
+    },
+  ] as const,
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+```
+
+### Both is an error
+
+```ts
+import { createContract } from '@tevm/contract'
+
+createContract({
+  name: 'Broken',
+  humanReadableAbi: ['function get() view returns (uint256)'],
+  // @ts-expect-error — `abi` is `never` in the human-readable variant
+  abi: [],
+})
+```
+
+:::warning
+For inference to work, the ABI must reach `createContract` as a tuple of literals. Prefer
+inlining the array in the call, or annotate it with `as const`. A value typed as `string[]`
+degrades every action creator to `any`.
+:::
+
+## See also
+
+- [`createContract`](/api/create-contract)
+- [`Contract`](/api/contract)
+- [Creating a contract](/guides/creating-contracts)

@@ -1,0 +1,85 @@
+---
+title: Prebuilt contract exports
+description: API reference for SimpleContract, ERC20, ERC721, ErrorContract and AdvancedContract.
+---
+
+# Prebuilt contract exports
+
+Five `Contract` values, each with real compiled `bytecode` and `deployedBytecode`, exported from
+the package root.
+
+```ts
+import {
+  SimpleContract,
+  ERC20,
+  ERC721,
+  ErrorContract,
+  AdvancedContract,
+} from '@tevm/contract'
+```
+
+None of them has an `address` — call [`withAddress`](/api/contract#withaddress) first.
+
+For usage examples see the [prebuilt contracts guide](/guides/prebuilt-contracts). This page is
+the surface summary.
+
+## `SimpleContract`
+
+Name: `SimpleContract`. A counter with storage, a getter, a setter, and an event.
+
+| Member | Signature |
+| --- | --- |
+| constructor | `constructor(uint256 initialValue)` |
+| read | `get() view returns (uint256)` |
+| write | `set(uint256 newValue)` |
+| events | `ValueSet(uint256 newValue)` |
+
+## `ERC20`
+
+Name: `OzERC20`. The OpenZeppelin ERC-20 implementation.
+
+| Member | Signature |
+| --- | --- |
+| constructor | `constructor(string name, string symbol)` |
+| read | `name()`, `symbol()`, `decimals()`, `totalSupply()`, `balanceOf(address)`, `allowance(address, address)` |
+| write | `approve(address spender, uint256 value)`, `transfer(address to, uint256 value)`, `transferFrom(address from, address to, uint256 value)` |
+| events | `Transfer(address indexed, address indexed, uint256)`, `Approval(address indexed, address indexed, uint256)` |
+| errors | `ERC20InsufficientBalance`, `ERC20InsufficientAllowance`, `ERC20InvalidApprover`, `ERC20InvalidReceiver`, `ERC20InvalidSender`, `ERC20InvalidSpender` |
+
+## `ERC721`
+
+Name: `OzERC721`. The OpenZeppelin ERC-721 implementation, with the standard NFT surface,
+`Transfer`/`Approval`/`ApprovalForAll` events, and the OZ ERC-721 custom errors.
+
+| Member | Signature |
+| --- | --- |
+| constructor | `constructor(string name, string symbol)` |
+
+## `ErrorContract`
+
+Name: `ErrorContract`. Every revert flavour behind a zero-argument function — custom errors with
+and without parameters, string reverts, bare reverts, and the four panic codes. No constructor
+arguments.
+
+| Errors | `SimpleError()`, `ErrorWithSingleParam(uint256)`, `ErrorWithMultipleParams(string, bytes32, address[])` |
+| --- | --- |
+| Reverts | `revertWithSimpleCustomError`, `revertWithCustomErrorSingleParam`, `revertWithCustomErrorMultipleParams`, `revertWithStringError`, `revertWithRequireAndMessage`, `revertWithRequireNoMessage`, `revertWithoutMessage` |
+| Panics | `panicWithAssertFailure`, `panicWithArithmeticOverflow`, `panicWithDivisionByZero`, `panicWithArrayOutOfBounds` |
+| Other | `errorOutOfGas`, `errorWithInvalidOpcode` |
+
+## `AdvancedContract`
+
+Name: `AdvancedContract`. Multiple storage types, an external call, and a `delegatecall`. Its
+constructor deploys a math-helper contract as a side effect.
+
+| Member | Signature |
+| --- | --- |
+| constructor | `constructor(uint256 initialNumber, bool initialBool, string initialString, address initialAddress)` |
+| read | `getNumber()`, `getBool()`, `getString()`, `getAddress()`, `getAllValues()`, `mathHelperAddress()` |
+| write | `setNumber(uint256)`, `setBool(bool)`, `setString(string)`, `setAddress(address)`, `setAllValues(uint256, bool, string, address)`, `setMathHelperAddress(address)`, `callMathHelper(uint256)`, `delegateCallMathHelper(uint256)` |
+| events | `NumberSet`, `BoolSet`, `StringSet`, `AddressSet`, `AllValuesSet`, `ExternalCallResult`, `DelegateCallResult` |
+
+:::note
+`callMathHelper` and `delegateCallMathHelper` are `nonpayable` in the ABI even though they read
+like getters, so they live on `.write`, not `.read`.
+:::

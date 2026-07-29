@@ -1,0 +1,165 @@
+---
+title: Writing state
+description: Building type-safe write actions for payable and nonpayable functions.
+---
+
+# Writing state
+
+Every `payable` and `nonpayable` function in the ABI becomes an action creator on
+`contract.write`. Like reads, calling one returns a plain object and performs no I/O — it
+describes a transaction, it does not send one.
+
+## The basics
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: [
+    'function balanceOf(address owner) view returns (uint256)',
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function approve(address spender, uint256 amount) returns (bool)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const action = Dai.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+
+console.log(action.functionName) // 'transfer'
+console.log(action.args)         // ['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n]
+console.log(action.address)      // '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+console.log(action.to)           // same value — for viem compatibility
+```
+
+`Dai.write.balanceOf` does not exist — `balanceOf` is `view`, so it is on
+[`.read`](/guides/reading).
+
+## The action has no transaction options
+
+A write action carries `abi`, `humanReadableAbi`, `functionName`, `args`, and (when known)
+`address`/`to`/`code`. It deliberately carries **no** `from`, `value`, `gas`, `nonce`, or
+`maxFeePerGas`. Those are execution concerns and belong to whatever sends the transaction.
+
+The idiom is to spread the action and add the options:
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const Token = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+
+await client.tevmContract({
+  ...Token.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n),
+  from: PREFUNDED_ACCOUNTS[0].address,
+  addToMempool: true,
+})
+
+await client.tevmMine({ blockCount: 1 })
+```
+
+## Payable functions
+
+`payable` functions appear on `.write` just like `nonpayable` ones. The ETH value is not an ABI
+argument, so it is not a parameter of the action creator — pass `value` alongside the spread
+action.
+
+```ts
+import { createContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+import { parseEther } from 'viem'
+
+const Wrapped = createContract({
+  name: 'WETH',
+  humanReadableAbi: [
+    'function deposit() payable',
+    'function withdraw(uint256 amount)',
+    'function balanceOf(address owner) view returns (uint256)',
+  ],
+  address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+})
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+await client.tevmContract({
+  ...Wrapped.write.deposit(),
+  from: PREFUNDED_ACCOUNTS[0].address,
+  value: parseEther('1'),
+  addToMempool: true,
+})
+
+await client.tevmMine({ blockCount: 1 })
+```
+
+## Simulate first, then send
+
+Because the action object is inert, the *same* object can be executed twice — once as a
+simulation and once for real. Nothing about the action encodes which it is.
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const Token = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+const transfer = Token.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+
+// Simulate — no mempool, no mining.
+const simulated = await client.tevmContract({
+  ...transfer,
+  from: PREFUNDED_ACCOUNTS[0].address,
+  throwOnFail: false,
+})
+
+if (simulated.errors?.length) {
+  console.error('would revert:', simulated.errors)
+} else {
+  await client.tevmContract({
+    ...transfer,
+    from: PREFUNDED_ACCOUNTS[0].address,
+    addToMempool: true,
+  })
+  await client.tevmMine({ blockCount: 1 })
+}
+```
+
+## Custom errors
+
+As with reads, `error` entries from the ABI are appended to each write action's `abi`, so a
+revert can be decoded into a named error rather than raw bytes.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Vault = createContract({
+  name: 'Vault',
+  humanReadableAbi: [
+    'function withdraw(uint256 amount)',
+    'error InsufficientBalance(uint256 available, uint256 required)',
+  ],
+})
+
+console.log(Vault.write.withdraw(1n).abi.map((entry) => entry.type))
+// ['function', 'error']
+```
+
+The package ships an [`ErrorContract`](/guides/prebuilt-contracts) with every revert flavour —
+custom errors with and without arguments, string reverts, and bare reverts — for exercising
+this path in tests.
+
+## Zero-argument functions omit `args`
+
+Exactly as with reads: a function with no parameters produces an action with no `args` key.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({ name: 'C', humanReadableAbi: ['function poke()'] })
+console.log('args' in C.write.poke()) // false
+```

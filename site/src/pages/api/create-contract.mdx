@@ -1,0 +1,149 @@
+---
+title: createContract
+description: API reference for createContract.
+---
+
+# `createContract`
+
+```ts
+import { createContract } from '@tevm/contract'
+```
+
+Creates a [`Contract`](/api/contract) from a human-readable ABI or a JSON ABI. This is the only
+constructor in the package.
+
+## Signature
+
+```ts
+function createContract<
+  TName extends string,
+  TAbi extends readonly string[] | Abi,
+  TAddress extends undefined | Address = undefined,
+  TBytecode extends undefined | Hex = undefined,
+  TDeployedBytecode extends undefined | Hex = undefined,
+  TCode extends undefined | Hex = undefined,
+>(
+  params: CreateContractParams<TName, TAbi, TAddress, TBytecode, TDeployedBytecode, TCode>,
+): Contract<TName, THumanReadableAbi, TAddress, TBytecode, TDeployedBytecode, TCode>
+```
+
+The runtime value is typed as [`CreateContractFn`](#createcontractfn).
+
+## Parameters
+
+See [`CreateContractParams`](/api/create-contract-params) for the full type. In summary:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `humanReadableAbi` | `readonly string[]` | one of | Mutually exclusive with `abi`. |
+| `abi` | `Abi` | one of | Mutually exclusive with `humanReadableAbi`. Converted with `formatAbi`. |
+| `name` | `string` | no | Contract name. Purely informational. |
+| `address` | `Address` | no | Checksummed with `getAddress` before being stored. |
+| `bytecode` | `Hex` | no | Creation bytecode. Required by `deploy()`. |
+| `deployedBytecode` | `Hex` | no | Runtime bytecode as compiled. |
+| `code` | `Hex` | no | Runtime bytecode for this instance; attached to every action. |
+
+## Returns
+
+A [`Contract`](/api/contract).
+
+## Throws
+
+- **`InvalidParamsError`** — if neither `humanReadableAbi` nor `abi` is supplied. The type
+  system normally prevents this, but untyped call sites reach it.
+
+## Behaviour notes
+
+- **Address checksumming.** `address` is passed through `getAddress`, so
+  `contract.address` is always EIP-55 checksummed. An invalid address throws.
+- **ABI derivation.** If `abi` is given, `humanReadableAbi` is derived with `formatAbi`. If
+  `humanReadableAbi` is given, `abi` is derived with `parseAbi`. Both are always present on the
+  result.
+- **Read/write split.** `read` receives `view` and `pure` functions; `write` receives `payable`
+  and `nonpayable` functions. Nothing appears in both.
+- **Errors are attached.** `error` entries from the ABI are appended to every read and write
+  action's `abi` so reverts can be decoded.
+- **Only optional fields that were supplied appear.** If you do not pass `code`, the returned
+  contract has no `code` key at all — not `code: undefined`. Same for `address`, `bytecode`, and
+  `deployedBytecode`.
+
+## Examples
+
+### Human-readable ABI
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const contract = createContract({
+  name: 'ERC20',
+  humanReadableAbi: [
+    'function balanceOf(address account) view returns (uint256)',
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const balanceAction = contract.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+const transferAction = contract.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+const transferFilter = contract.events.Transfer({ fromBlock: 'latest' })
+```
+
+### JSON ABI
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const contract = createContract({
+  name: 'ERC20',
+  abi: [
+    {
+      type: 'function',
+      name: 'balanceOf',
+      inputs: [{ name: 'account', type: 'address' }],
+      outputs: [{ type: 'uint256' }],
+      stateMutability: 'view',
+    },
+  ] as const,
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+console.log(contract.humanReadableAbi)
+// ['function balanceOf(address account) view returns (uint256)']
+```
+
+### Missing ABI throws
+
+```ts
+import { createContract } from '@tevm/contract'
+
+try {
+  // @ts-expect-error — neither `abi` nor `humanReadableAbi`
+  createContract({ name: 'Broken' })
+} catch (error) {
+  console.log((error as Error).message)
+  // 'Must provide either humanReadableAbi or abi'
+}
+```
+
+## `CreateContractFn`
+
+```ts
+import type { CreateContractFn } from '@tevm/contract'
+```
+
+The type of the `createContract` function itself. Useful when passing `createContract` around
+or wrapping it:
+
+```ts
+import { createContract, type CreateContractFn } from '@tevm/contract'
+
+const withDefaultName: CreateContractFn = (params) =>
+  createContract({ name: 'Unnamed', ...params })
+```
+
+## See also
+
+- [Creating a contract](/guides/creating-contracts) — guide
+- [`Contract`](/api/contract) — the returned type
+- [`CreateContractParams`](/api/create-contract-params) — the parameter type

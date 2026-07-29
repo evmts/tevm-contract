@@ -1,0 +1,161 @@
+---
+title: Getting started
+description: Install @tevm/contract and build your first type-safe contract.
+---
+
+# Getting started
+
+## Install
+
+`@tevm/contract` is published to npm as [`@tevm/contract`](https://www.npmjs.com/package/@tevm/contract).
+The 1.0 line is currently a release candidate.
+
+:::code-group
+
+```bash [npm]
+npm install @tevm/contract@^1.0.0-rc.151
+```
+
+```bash [pnpm]
+pnpm add @tevm/contract@^1.0.0-rc.151
+```
+
+```bash [bun]
+bun add @tevm/contract@^1.0.0-rc.151
+```
+
+```bash [yarn]
+yarn add @tevm/contract@^1.0.0-rc.151
+```
+
+:::
+
+`@tevm/utils` and `@tevm/errors` are installed automatically as dependencies — you do not need
+to add them yourself, though importing types from `@tevm/utils` (`Address`, `Hex`, `Abi`) is
+supported and common.
+
+:::note
+If you already depend on the `tevm` meta-package, this package is re-exported from it as
+`tevm/contract`. Every example on this site works with either import specifier. Use
+`@tevm/contract` when you want the kernel without pulling in the node.
+:::
+
+### Requirements
+
+| Requirement  | Version                                        |
+| ------------ | ---------------------------------------------- |
+| Node.js      | `^24.0.0` (the package also runs in browsers and Bun) |
+| TypeScript   | `>=5.0`, with `"strict": true`                 |
+| Module format| ESM and CJS builds are both published          |
+
+:::warning
+Set `"strict": true` in your `tsconfig.json`. Without it, `abitype` cannot infer argument types
+from human-readable ABI strings, and every action creator degrades to `any`. This is the single
+most common cause of "why are my types not working".
+:::
+
+## Your first contract
+
+```ts
+import { createContract } from '@tevm/contract'
+
+export const Counter = createContract({
+  name: 'Counter',
+  humanReadableAbi: [
+    'function get() view returns (uint256)',
+    'function set(uint256 newValue)',
+    'event ValueSet(uint256 newValue)',
+  ],
+})
+```
+
+That is a complete, valid contract definition. `Counter.abi` is the parsed JSON ABI,
+`Counter.humanReadableAbi` is the array you passed in, and `Counter.read`, `Counter.write`, and
+`Counter.events` are populated from the ABI.
+
+### Attach an address
+
+A contract defined without an address is a *shape*. Attach an address to get a contract bound to
+a deployment:
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Counter = createContract({
+  name: 'Counter',
+  humanReadableAbi: ['function get() view returns (uint256)', 'function set(uint256 newValue)'],
+})
+
+const deployed = Counter.withAddress('0x1234567890123456789012345678901234567890')
+
+console.log(deployed.address)
+// '0x1234567890123456789012345678901234567890'
+console.log(Counter.address)
+// undefined — `withAddress` returned a new contract, it did not mutate `Counter`
+```
+
+Once an address is attached, every action creator includes `address` and `to`:
+
+```ts
+console.log(deployed.read.get())
+// {
+//   abi: [...],
+//   humanReadableAbi: ['function get() view returns (uint256)'],
+//   functionName: 'get',
+//   address: '0x1234567890123456789012345678901234567890',
+//   to: '0x1234567890123456789012345678901234567890',
+// }
+```
+
+## Executing an action
+
+`@tevm/contract` builds actions; something else runs them. A complete round-trip using
+`SimpleContract` — one of the [prebuilt contracts](/guides/prebuilt-contracts) this package
+ships with real, compiled bytecode — and a Tevm in-memory node:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+// Deploy. `SimpleContract.deploy(initialValue)` returns { abi, bytecode, args }.
+const deployResult = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...SimpleContract.deploy(42n),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!deployResult.createdAddress) throw new Error('deployment failed')
+const Counter = SimpleContract.withAddress(deployResult.createdAddress)
+
+// Read — no transaction, no mining.
+const { data } = await client.tevmContract(Counter.read.get())
+console.log(data) // 42n
+
+// Write — spread the action and add the transaction options.
+await client.tevmContract({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...Counter.write.set(100n),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+const { data: updated } = await client.tevmContract(Counter.read.get())
+console.log(updated) // 100n
+```
+
+The important thing here is the division of labour: `Counter.read.get()` and
+`Counter.write.set(100n)` are plain objects built with no client at all, and `client.tevmContract`
+is the thing that knows how to execute them. The same objects work with viem — see
+[Using with viem and ethers](/guides/interop).
+
+## Where to go next
+
+- [Creating a contract](/guides/creating-contracts) — human-readable vs JSON ABIs, bytecode
+- [Reading state](/guides/reading) and [Writing state](/guides/writing)
+- [Events and filters](/guides/events)
+- [Bundler-generated contracts](/guides/bundler) — importing `.sol` files directly
+- [API reference](/api/create-contract)

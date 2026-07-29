@@ -1,0 +1,159 @@
+---
+title: Deploying contracts
+description: Using contract.deploy to build deployment data, and the three bytecode fields.
+---
+
+# Deploying contracts
+
+`contract.deploy(...constructorArgs)` returns the parameters needed to deploy the contract:
+`{ abi, bytecode }`, plus `args` when the constructor takes any.
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+
+const deployParams = SimpleContract.deploy(42n)
+
+console.log(deployParams.bytecode) // '0x60806040...'
+console.log(deployParams.args)     // [42n]
+console.log(deployParams.abi)      // the full parsed ABI
+```
+
+Constructor arguments are typed from the ABI's `constructor` entry. `SimpleContract` declares
+`constructor(uint256 initialValue)`, so:
+
+```ts
+SimpleContract.deploy(42n)  // ok
+
+// @ts-expect-error — number is not assignable to bigint
+SimpleContract.deploy(42)
+```
+
+A contract with no constructor arguments takes none:
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: ['function get() view returns (uint256)'],
+  bytecode: '0x60806040...',
+})
+
+console.log(C.deploy())
+// { bytecode: '0x60806040...', abi: [...] }   ← no `args` key
+```
+
+:::warning
+`deploy` throws `Error: Bytecode is required to generate deploy data` when the contract was
+created without a `bytecode` field. This is a runtime check, not a type-level one — a contract
+built from an ABI alone will typecheck and then throw. Guard with `if (!contract.bytecode)` when
+building contracts dynamically.
+:::
+
+## Deploying with Tevm
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const result = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...SimpleContract.deploy(42n),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!result.createdAddress) throw new Error('deployment failed')
+
+// Bind the contract to where it landed.
+const Counter = SimpleContract.withAddress(result.createdAddress)
+
+const { data } = await client.tevmContract(Counter.read.get())
+console.log(data) // 42n
+```
+
+## Deploying with viem
+
+`deploy()` returns exactly the shape viem's `deployContract` wants:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { foundry } from 'viem/chains'
+
+const wallet = createWalletClient({
+  account: privateKeyToAccount('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'),
+  chain: foundry,
+  transport: http('http://127.0.0.1:8545'),
+})
+
+const hash = await wallet.deployContract(SimpleContract.deploy(42n))
+console.log(hash)
+```
+
+Or, if you only want the calldata, encode it yourself:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { encodeDeployData } from 'viem'
+
+const data = encodeDeployData(SimpleContract.deploy(42n))
+console.log(data) // '0x60806040...002a'  — bytecode with the encoded constructor arg appended
+```
+
+## The three bytecode fields
+
+They are not interchangeable.
+
+| Field | What it is | Where it comes from | What uses it |
+| --- | --- | --- | --- |
+| `bytecode` | Creation code: the constructor plus the runtime code it returns. | `solc` `evm.bytecode.object` | `deploy()` |
+| `deployedBytecode` | Runtime code as compiled, with no constructor arguments applied. | `solc` `evm.deployedBytecode.object` | Seeding state directly (e.g. `tevmSetAccount`) |
+| `code` | Runtime code for *this instance*, i.e. creation code already encoded with constructor arguments. | `withCode(...)`, or the bundler | Attached to every action as `code` |
+
+The distinction matters when you want a contract to execute without ever being deployed:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+
+// A contract instance whose actions carry runtime code inline.
+const local = SimpleContract.withCode(SimpleContract.deployedBytecode)
+
+console.log(local.read.get().code)   // '0x6080...'
+console.log(SimpleContract.read.get().code) // undefined — the original is unchanged
+```
+
+An executor that supports the `code` field runs the function against that bytecode directly, so
+no deployment transaction and no address are required. This is how the Tevm node handles
+"call this function against this bytecode" without polluting state.
+
+## Deploying with state injection instead
+
+For tests, skipping deployment entirely is usually faster and always more deterministic — set
+the account's code and storage directly:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { createMemoryClient } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const address = '0x1234567890123456789012345678901234567890' as const
+
+await client.tevmSetAccount({
+  address,
+  deployedBytecode: SimpleContract.deployedBytecode,
+})
+
+const Counter = SimpleContract.withAddress(address)
+const { data } = await client.tevmContract(Counter.read.get())
+console.log(data) // 0n — storage is empty, so the constructor never ran
+```
+
+Note the trade-off: the constructor is never executed, so any storage it would have initialised
+is zero.

@@ -48,8 +48,19 @@ pnpm test
 Package releases are managed with Changesets. Add a changeset with `pnpm changeset`; merging the generated version PR
 publishes to npm with provenance.
 
-API documentation belongs at [contract.tevm.sh](https://contract.tevm.sh). The umbrella Tevm documentation remains at
-[tevm.sh](https://tevm.sh).
+## Documentation
+
+The documentation site lives in [`site/`](./site) and is built with [vocs](https://vocs.dev) 2.x. It deploys to
+[contract.tevm.sh](https://contract.tevm.sh). The umbrella Tevm documentation remains at [tevm.sh](https://tevm.sh).
+
+```sh
+pnpm docs:dev      # local dev server
+pnpm docs:build    # production build -> site/dist/public
+pnpm docs:preview  # serve the production build
+```
+
+`pnpm docs` is separate: it runs TypeDoc to regenerate the markdown API reference in [`docs/`](./docs) from source
+JSDoc.
 
 ## License
 

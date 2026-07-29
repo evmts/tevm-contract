@@ -1,0 +1,179 @@
+---
+title: Using with viem and ethers
+description: Action objects are plain data, so they work with viem, wagmi, and ethers directly.
+---
+
+# Using with viem and ethers
+
+Action objects are plain data with no Tevm-specific machinery, so they drop straight into other
+libraries. The one deliberate design decision that makes this work is that every action carries
+**both** `address` and `to`:
+
+- Tevm's call API and ethers use `to`.
+- viem's contract actions use `address`.
+
+Rather than force a translation layer, the action creators emit both.
+
+## viem
+
+### Reading
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createPublicClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http('https://ethereum-rpc.publicnode.com'),
+})
+
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+
+const balance = await client.readContract(
+  Dai.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'),
+)
+console.log(balance) // bigint
+```
+
+No adapter, no `.abi`/`.functionName`/`.args` destructuring — the object already has the keys
+`readContract` expects.
+
+### Writing
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { mainnet } from 'viem/chains'
+
+const wallet = createWalletClient({
+  account: privateKeyToAccount('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'),
+  chain: mainnet,
+  transport: http('https://ethereum-rpc.publicnode.com'),
+})
+
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+
+const hash = await wallet.writeContract(
+  Dai.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n),
+)
+console.log(hash)
+```
+
+### Simulating
+
+```ts
+const { result, request } = await client.simulateContract({
+  ...Dai.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n),
+  account: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+})
+```
+
+### Multicall
+
+Actions compose naturally into a multicall array:
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createPublicClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http('https://ethereum-rpc.publicnode.com'),
+})
+
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+const Usdc = ERC20.withAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')
+const holder = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' as const
+
+const results = await client.multicall({
+  contracts: [
+    Dai.read.balanceOf(holder),
+    Usdc.read.balanceOf(holder),
+    Dai.read.totalSupply(),
+  ],
+})
+
+console.log(results.map((r) => r.result))
+```
+
+### Events
+
+```ts
+const logs = await client.getLogs(
+  Dai.events.Transfer({
+    args: { from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+    fromBlock: 21_000_000n,
+    toBlock: 'latest',
+  }),
+)
+```
+
+### Encoding only
+
+If you need raw calldata rather than a client call:
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { encodeFunctionData } from 'viem'
+
+const data = encodeFunctionData(
+  ERC20.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n),
+)
+console.log(data) // '0xa9059cbb...'
+```
+
+## wagmi
+
+wagmi's hooks take the same parameter shape as viem's actions, so spreading works there too:
+
+```tsx
+import { ERC20 } from '@tevm/contract'
+import { useReadContract } from 'wagmi'
+
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+
+export function Balance({ owner }: { owner: `0x${string}` }) {
+  const { data, isLoading } = useReadContract(Dai.read.balanceOf(owner))
+
+  if (isLoading) return <span>Loading…</span>
+  return <span>{data?.toString()}</span>
+}
+```
+
+## ethers
+
+ethers wants a JSON ABI and an address rather than a per-call action object, so use the
+contract's `abi` and `address` to construct an `ethers.Contract` once:
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { JsonRpcProvider, Contract as EthersContract } from 'ethers'
+
+const provider = new JsonRpcProvider('https://ethereum-rpc.publicnode.com')
+
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+const dai = new EthersContract(Dai.address, Dai.abi, provider)
+
+const balance = await dai.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+console.log(balance)
+```
+
+`humanReadableAbi` also works directly as an ethers "human-readable ABI":
+
+```ts
+const dai = new EthersContract(Dai.address, [...Dai.humanReadableAbi], provider)
+```
+
+:::note
+`humanReadableAbi` is a readonly tuple. ethers wants a mutable array, hence the spread.
+:::
+
+## Why this works
+
+Nothing in this package knows about viem, wagmi, or ethers. The interop is a consequence of
+emitting the union of the field names each library expects — `abi`, `functionName`, `args`,
+`address`, `to`, `eventName`, `humanReadableAbi`, and optionally `code`. Any library that reads
+a subset of those keys and ignores the rest works out of the box.

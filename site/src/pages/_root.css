@@ -1,0 +1,536 @@
+/*
+ * Shared Tevm docs theme — contract.tevm.sh
+ * Design tokens are consumed from vocs' emitted CSS variables
+ * (--color-accent, --text-color-*, --background-color-*, --border-color-*)
+ * so light and dark mode stay correct automatically.
+ */
+
+:root {
+	--tevm-accent: #0085ff;
+	--tevm-radius: 14px;
+	--tevm-radius-sm: 9px;
+	--tevm-ring: color-mix(in srgb, var(--color-accent) 35%, transparent);
+	--tevm-surface: var(--background-color-surface);
+	--tevm-surface-muted: var(--background-color-surfaceMuted);
+	--tevm-border: var(--border-color-primary);
+	--tevm-text: var(--text-color-primary);
+	--tevm-text-strong: var(--text-color-heading);
+	--tevm-text-muted: var(--text-color-secondary);
+	--tevm-mono: var(--font-mono);
+	--tevm-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 12px 32px -16px rgb(0 0 0 / 0.18);
+	--tevm-tok-key: light-dark(#0433ff, #7db8ff);
+	--tevm-tok-str: light-dark(#94280f, #ff9d7a);
+	--tevm-tok-num: light-dark(#1c00cf, #ffd479);
+	--tevm-tok-com: light-dark(#707d8b, #6b7a8d);
+	--tevm-tok-fn: light-dark(#326d74, #7ee0d2);
+	--tevm-tok-prop: light-dark(#8957e5, #c4a7ff);
+}
+
+/* ---------- global polish ---------- */
+
+body {
+	font-feature-settings: "ss01", "cv11";
+	text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.02em;
+}
+
+::selection {
+	background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
+/* markdown code blocks: rounded, bordered, subtle shadow */
+div[class*="codeBlock"],
+.vocs_CodeBlock {
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius-sm);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+/* inline code */
+:not(pre) > code {
+	border: 1px solid var(--tevm-border);
+	border-radius: 5px;
+	padding: 0.1em 0.35em;
+}
+
+/* ---------- hero ---------- */
+
+.tevm-hero {
+	position: relative;
+	margin: -0.5rem 0 2.75rem;
+	padding: 2.75rem 0 0;
+}
+
+.tevm-hero::before {
+	content: "";
+	position: absolute;
+	inset: -3rem -25vw 0;
+	pointer-events: none;
+	background:
+		radial-gradient(42rem 18rem at 18% -10%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 70%),
+		radial-gradient(
+			36rem 16rem at 85% -20%,
+			color-mix(in srgb, var(--color-iris, #7c7cff) 12%, transparent),
+			transparent 70%
+		);
+	mask-image: linear-gradient(to bottom, black, transparent);
+	z-index: -1;
+}
+
+.tevm-hero-eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	font-family: var(--tevm-mono);
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--color-accent);
+	background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-accent) 26%, transparent);
+	padding: 0.28rem 0.7rem;
+	border-radius: 999px;
+	letter-spacing: 0.01em;
+}
+
+.tevm-hero-eyebrow::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 999px;
+	background: var(--color-accent);
+}
+
+.tevm-hero-title {
+	margin: 1rem 0 0.85rem !important;
+	font-size: clamp(2.1rem, 4.6vw, 3.15rem);
+	line-height: 1.06;
+	letter-spacing: -0.035em;
+	font-weight: 700;
+	color: var(--tevm-text-strong);
+	border: none !important;
+}
+
+.tevm-hero-sub {
+	margin: 0 0 1.6rem;
+	max-width: 56ch;
+	font-size: 1.08rem;
+	line-height: 1.65;
+	color: var(--tevm-text-muted);
+}
+
+.tevm-hero-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 2rem;
+}
+
+.tevm-install {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.65rem;
+	font-family: var(--tevm-mono);
+	font-size: 0.9rem;
+	color: var(--tevm-text-strong);
+	background: var(--tevm-surface);
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius-sm);
+	padding: 0.6rem 0.85rem;
+	cursor: pointer;
+	box-shadow: var(--tevm-shadow);
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease,
+		transform 0.15s ease;
+}
+
+.tevm-install:hover {
+	border-color: var(--tevm-ring);
+	transform: translateY(-1px);
+}
+
+.tevm-install:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.tevm-install-prompt {
+	color: var(--color-accent);
+	font-weight: 600;
+	user-select: none;
+}
+
+.tevm-install-copy {
+	font-size: 0.72rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--tevm-text-muted);
+	border: 1px solid var(--tevm-border);
+	border-radius: 6px;
+	padding: 0.15rem 0.45rem;
+}
+
+.tevm-install[data-copied="true"] .tevm-install-copy {
+	color: var(--color-accent);
+	border-color: var(--tevm-ring);
+}
+
+.tevm-hero-cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.92rem;
+	font-weight: 550;
+	color: var(--color-accentInvert, #fff);
+	background: var(--color-accent);
+	border-radius: var(--tevm-radius-sm);
+	padding: 0.65rem 1.05rem;
+	text-decoration: none !important;
+	box-shadow: var(--tevm-shadow);
+	transition:
+		filter 0.15s ease,
+		transform 0.15s ease;
+}
+
+.tevm-hero-cta:hover {
+	filter: brightness(1.07);
+	transform: translateY(-1px);
+}
+
+.tevm-hero-ghost {
+	display: inline-flex;
+	align-items: center;
+	font-size: 0.92rem;
+	font-weight: 550;
+	color: var(--tevm-text);
+	border: 1px solid var(--tevm-border);
+	background: var(--tevm-surface);
+	border-radius: var(--tevm-radius-sm);
+	padding: 0.65rem 1.05rem;
+	text-decoration: none !important;
+	transition: border-color 0.15s ease;
+}
+
+.tevm-hero-ghost:hover {
+	border-color: var(--tevm-ring);
+}
+
+/* ---------- code card ---------- */
+
+.tevm-codecard {
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius);
+	background: var(--tevm-surface-muted);
+	box-shadow: var(--tevm-shadow);
+	overflow: hidden;
+}
+
+.tevm-codecard-bar {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.65rem 0.95rem;
+	border-bottom: 1px solid var(--tevm-border);
+	background: var(--tevm-surface);
+}
+
+.tevm-codecard-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	border: 1px solid var(--tevm-border);
+}
+
+.tevm-codecard-dot:nth-child(1) {
+	background: #ff5f57;
+}
+.tevm-codecard-dot:nth-child(2) {
+	background: #febc2e;
+}
+.tevm-codecard-dot:nth-child(3) {
+	background: #28c840;
+}
+
+.tevm-codecard-title {
+	margin-left: 0.4rem;
+	font-family: var(--tevm-mono);
+	font-size: 0.74rem;
+	color: var(--tevm-text-muted);
+}
+
+.tevm-codecard pre {
+	margin: 0;
+	padding: 1.05rem 1.15rem;
+	overflow-x: auto;
+	font-family: var(--tevm-mono);
+	font-size: 0.845rem;
+	line-height: 1.72;
+	background: transparent !important;
+	border: none !important;
+}
+
+.tevm-codecard code {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+}
+
+.tok-key {
+	color: var(--tevm-tok-key);
+}
+.tok-str {
+	color: var(--tevm-tok-str);
+}
+.tok-num {
+	color: var(--tevm-tok-num);
+}
+.tok-com {
+	color: var(--tevm-tok-com);
+	font-style: italic;
+}
+.tok-fn {
+	color: var(--tevm-tok-fn);
+}
+.tok-prop {
+	color: var(--tevm-tok-prop);
+}
+
+/* ---------- action explorer ---------- */
+
+.tevm-explorer {
+	display: grid;
+	grid-template-columns: minmax(220px, 0.9fr) 1.6fr;
+	gap: 0;
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius);
+	background: var(--tevm-surface);
+	box-shadow: var(--tevm-shadow);
+	overflow: hidden;
+	margin: 1.25rem 0 2rem;
+}
+
+@media (max-width: 720px) {
+	.tevm-explorer {
+		grid-template-columns: 1fr;
+	}
+}
+
+.tevm-explorer-nav {
+	border-right: 1px solid var(--tevm-border);
+	background: var(--tevm-surface-muted);
+	padding: 0.9rem 0.65rem;
+	overflow-y: auto;
+	max-height: 480px;
+}
+
+@media (max-width: 720px) {
+	.tevm-explorer-nav {
+		border-right: none;
+		border-bottom: 1px solid var(--tevm-border);
+		max-height: none;
+	}
+}
+
+.tevm-explorer-group {
+	font-family: var(--tevm-mono);
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--tevm-text-muted);
+	padding: 0.55rem 0.5rem 0.3rem;
+}
+
+.tevm-explorer-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	text-align: left;
+	font-family: var(--tevm-mono);
+	font-size: 0.83rem;
+	color: var(--tevm-text);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 7px;
+	padding: 0.34rem 0.5rem;
+	cursor: pointer;
+	transition:
+		background 0.12s ease,
+		border-color 0.12s ease;
+}
+
+.tevm-explorer-item:hover {
+	background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+}
+
+.tevm-explorer-item[data-active="true"] {
+	background: color-mix(in srgb, var(--color-accent) 11%, transparent);
+	border-color: var(--tevm-ring);
+	color: var(--tevm-text-strong);
+}
+
+.tevm-explorer-item .dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 999px;
+	flex: none;
+}
+
+.dot-read {
+	background: #28c840;
+}
+.dot-write {
+	background: #febc2e;
+}
+.dot-event {
+	background: var(--color-accent);
+}
+.dot-deploy {
+	background: #b06bff;
+}
+
+.tevm-explorer-pane {
+	padding: 1.1rem 1.25rem 1.25rem;
+	min-width: 0;
+}
+
+.tevm-explorer-call {
+	font-family: var(--tevm-mono);
+	font-size: 0.88rem;
+	color: var(--tevm-text-strong);
+	background: var(--tevm-surface-muted);
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius-sm);
+	padding: 0.6rem 0.8rem;
+	overflow-x: auto;
+	white-space: nowrap;
+	margin-bottom: 0.9rem;
+}
+
+.tevm-explorer-label {
+	font-family: var(--tevm-mono);
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--tevm-text-muted);
+	margin: 0.9rem 0 0.4rem;
+}
+
+.tevm-explorer-json {
+	font-family: var(--tevm-mono);
+	font-size: 0.8rem;
+	line-height: 1.7;
+	background: var(--tevm-surface-muted);
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius-sm);
+	padding: 0.75rem 0.9rem;
+	overflow-x: auto;
+	white-space: pre;
+	margin: 0;
+}
+
+.tevm-explorer-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.tevm-chip {
+	font-family: var(--tevm-mono);
+	font-size: 0.74rem;
+	color: var(--color-accent);
+	background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+	border-radius: 999px;
+	padding: 0.22rem 0.65rem;
+	white-space: nowrap;
+}
+
+/* ---------- ecosystem grid ---------- */
+
+.tevm-eco {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	gap: 0.7rem;
+	margin: 1.25rem 0 2rem;
+}
+
+.tevm-eco-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	border: 1px solid var(--tevm-border);
+	border-radius: var(--tevm-radius-sm);
+	background: var(--tevm-surface);
+	padding: 0.85rem 0.95rem;
+	text-decoration: none !important;
+	transition:
+		border-color 0.15s ease,
+		transform 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.tevm-eco-card:hover {
+	border-color: var(--tevm-ring);
+	transform: translateY(-2px);
+	box-shadow: var(--tevm-shadow);
+}
+
+.tevm-eco-name {
+	font-weight: 600;
+	font-size: 0.92rem;
+	color: var(--tevm-text-strong);
+}
+
+.tevm-eco-host {
+	font-family: var(--tevm-mono);
+	font-size: 0.72rem;
+	color: var(--color-accent);
+}
+
+.tevm-eco-desc {
+	font-size: 0.8rem;
+	color: var(--tevm-text-muted);
+	line-height: 1.45;
+}
+
+.tevm-eco-card[data-current="true"] {
+	border-color: var(--tevm-ring);
+	background: color-mix(in srgb, var(--color-accent) 6%, var(--tevm-surface));
+	cursor: default;
+}
+
+.tevm-eco-card[data-current="true"]:hover {
+	transform: none;
+	box-shadow: none;
+}
+
+.tevm-eco-here {
+	position: absolute;
+	top: 0.55rem;
+	right: 0.65rem;
+	font-family: var(--tevm-mono);
+	font-size: 0.62rem;
+	font-weight: 600;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tevm-install,
+	.tevm-hero-cta,
+	.tevm-eco-card {
+		transition: none;
+	}
+}

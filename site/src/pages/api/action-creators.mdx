@@ -1,0 +1,190 @@
+---
+title: Action creators
+description: API reference for ReadActionCreator, WriteActionCreator, EventActionCreator and their helpers.
+---
+
+# Action creators
+
+The three mapped types behind `contract.read`, `contract.write`, and `contract.events`. You
+rarely name them directly — they are what `Contract`'s properties resolve to — but they are
+exported for building your own wrappers.
+
+```ts
+import type {
+  ReadActionCreator,
+  WriteActionCreator,
+  EventActionCreator,
+  MaybeExtractEventArgsFromAbi,
+  ValueOf,
+} from '@tevm/contract'
+```
+
+## `ReadActionCreator`
+
+```ts
+type ReadActionCreator<
+  THumanReadableAbi extends readonly string[],
+  TAddress extends Address | undefined,
+  TCode extends Hex | undefined,
+  TAddressArgs = TAddress extends undefined ? {} : { address: TAddress; to: TAddress },
+>
+```
+
+Maps every `view` and `pure` function name in the ABI to an action creator. Each creator is
+both callable and an object carrying the same metadata.
+
+**Calling it returns:**
+
+| Key | Present when | Value |
+| --- | --- | --- |
+| `functionName` | always | The function name, as a literal type. |
+| `abi` | always | The matching function entries plus every `error` entry in the ABI. |
+| `humanReadableAbi` | always | The single formatted signature. |
+| `args` | the function takes ≥1 argument | The arguments, typed from the ABI. |
+| `address`, `to` | `TAddress` is not `undefined` | The contract address, twice, for Tevm/viem compatibility. |
+| `code` | `TCode` is not `undefined` | The instance's runtime bytecode. |
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: ['function balanceOf(address owner) view returns (uint256)'],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const action = C.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+// { abi, humanReadableAbi, functionName: 'balanceOf', address, to, args }
+
+// The creator itself carries metadata too:
+console.log(C.read.balanceOf.functionName) // 'balanceOf'
+console.log(C.read.balanceOf.address)      // '0x6B17…1d0F'
+```
+
+:::note
+When a function takes no arguments, the `args` key is **absent**, not `[]`. viem and wagmi
+reject an empty `args` array on some paths.
+:::
+
+Full guide: [Reading state](/guides/reading).
+
+## `WriteActionCreator`
+
+```ts
+type WriteActionCreator<
+  THumanReadableAbi extends readonly string[],
+  TAddress extends Address | undefined,
+  TCode extends Hex | undefined,
+  TAddressArgs = TAddress extends undefined ? {} : { address: TAddress; to: TAddress },
+>
+```
+
+Identical in shape to `ReadActionCreator`, but maps `payable` and `nonpayable` functions
+instead. The returned object carries no transaction options — no `from`, `value`, `gas`, or
+`nonce`. Those belong to the executor.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: ['function transfer(address to, uint256 amount) returns (bool)'],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const action = C.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+```
+
+Full guide: [Writing state](/guides/writing).
+
+## `EventActionCreator`
+
+```ts
+type EventActionCreator<
+  THumanReadableAbi extends readonly string[],
+  TBytecode extends Hex | undefined,
+  TDeployedBytecode extends Hex | undefined,
+  TAddress extends Address | undefined,
+>
+```
+
+Maps every event name in the ABI to a filter creator.
+
+**Parameters** (all optional):
+
+| Parameter | Type | Meaning |
+| --- | --- | --- |
+| `fromBlock` | `BlockNumber \| BlockTag` | First block to search. |
+| `toBlock` | `BlockNumber \| BlockTag` | Last block to search. |
+| `args` | indexed event args | Values for indexed parameters; omitted keys are wildcards. |
+| `strict` | `boolean` | Drop logs whose data does not match the ABI exactly. |
+
+**Returns** `{ eventName, abi, humanReadableAbi, bytecode, deployedBytecode, address, ...params }`.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: ['event Transfer(address indexed from, address indexed to, uint256 value)'],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const filter = C.events.Transfer({
+  args: { from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+  fromBlock: 0n,
+  toBlock: 'latest',
+})
+```
+
+If the ABI declares no events, `contract.events` is `{}`.
+
+Full guide: [Events and filters](/guides/events).
+
+## Helper types
+
+### `MaybeExtractEventArgsFromAbi`
+
+```ts
+type MaybeExtractEventArgsFromAbi<
+  TAbi extends Abi | readonly unknown[] | undefined,
+  TEventName extends string | undefined,
+>
+```
+
+Resolves to `GetEventArgs<TAbi, TEventName>` when both an ABI and an event name are supplied,
+and `undefined` otherwise. Used internally to type the `args` filter; exported for wrappers
+that need to thread an optional event name through their own generics.
+
+```ts
+import type { MaybeExtractEventArgsFromAbi } from '@tevm/contract'
+import type { ParseAbi } from '@tevm/utils'
+
+type Abi_ = ParseAbi<['event Transfer(address indexed from, address indexed to, uint256 value)']>
+
+type TransferArgs = MaybeExtractEventArgsFromAbi<Abi_, 'Transfer'>
+// { from?: `0x${string}` | null, to?: `0x${string}` | null }
+
+type NoName = MaybeExtractEventArgsFromAbi<Abi_, undefined>
+// undefined
+```
+
+### `ValueOf`
+
+```ts
+type ValueOf<T> = T[keyof T]
+```
+
+A one-line utility. Exported because the action-creator types use it and downstream generic
+code often needs the same thing.
+
+```ts
+import type { ValueOf } from '@tevm/contract'
+
+type Values = ValueOf<{ a: 1; b: 2 }> // 1 | 2
+```
+
+## See also
+
+- [`Contract`](/api/contract)
+- [Using with viem and ethers](/guides/interop) — why `address` and `to` are both emitted

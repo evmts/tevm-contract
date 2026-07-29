@@ -67,8 +67,8 @@ import { writeFactory } from './write/writeFactory.js'
  * ```
  *
  * @see {@link Contract} for the full API of the returned Contract instance.
- * @see {@link https://tevm.sh/learn/contracts/} for more information on working with contracts in Tevm.
- * @see {@link https://tevm.sh/reference/tevm/contract/types/Contract/} for detailed Contract type documentation.
+ * @see {@link https://contract.tevm.sh/guides/creating-contracts} for more information on working with contracts in Tevm.
+ * @see {@link https://contract.tevm.sh/api/contract} for detailed Contract type documentation.
  */
 export const createContract = ({
 	name,

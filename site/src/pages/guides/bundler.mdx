@@ -1,0 +1,132 @@
+---
+title: Bundler-generated contracts
+description: How the Tevm bundler produces Contract objects from .sol imports.
+---
+
+# Bundler-generated contracts
+
+The Tevm bundler lets you import a Solidity file directly from TypeScript:
+
+```ts
+import { MyToken } from './MyToken.sol'
+```
+
+What you get back is a `Contract` from this package — the same object `createContract` returns,
+with `bytecode` and `deployedBytecode` already filled in from the compiler.
+
+This is why `@tevm/contract` is a standalone package: the bundler runs inside `tsc`, ESLint,
+Vite, and your editor's language server, and it needs to *emit* this type without depending on
+an EVM. See [How it fits into Tevm](/ecosystem).
+
+## What the bundler emits
+
+For a `MyToken.sol` containing an ERC-20, the bundler generates roughly this module:
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const _MyToken = {
+  name: 'MyToken',
+  humanReadableAbi: [
+    'constructor(string name, string symbol)',
+    'function balanceOf(address account) view returns (uint256)',
+    'function transfer(address to, uint256 value) returns (bool)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+  ],
+  bytecode: '0x60806040...',
+  deployedBytecode: '0x60806040...',
+} as const
+
+export const MyToken = createContract(_MyToken)
+```
+
+Note `as const`. It is load-bearing: without it the `humanReadableAbi` array widens to
+`string[]` and every action creator degrades to `any`. If you hand-write a contract module,
+copy this shape.
+
+## Using an imported contract
+
+Once imported, it behaves exactly like any other contract on this site:
+
+```ts
+import { MyToken } from './MyToken.sol'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const result = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...MyToken.deploy('My Token', 'MTK'),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!result.createdAddress) throw new Error('deployment failed')
+const token = MyToken.withAddress(result.createdAddress)
+
+const { data } = await client.tevmContract(
+  token.read.balanceOf(PREFUNDED_ACCOUNTS[0].address),
+)
+console.log(data)
+```
+
+## Setting it up
+
+The bundler ships as a set of plugins, plus a TypeScript language-service plugin so your editor
+resolves `.sol` imports too.
+
+:::code-group
+
+```ts [vite.config.ts]
+import { vitePluginTevm } from '@tevm/bundler/vite-plugin'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [vitePluginTevm()],
+})
+```
+
+```json [tsconfig.json]
+{
+  "compilerOptions": {
+    "strict": true,
+    "plugins": [{ "name": "@tevm/ts-plugin" }]
+  }
+}
+```
+
+:::
+
+:::warning
+The TypeScript plugin only takes effect when your editor uses the **workspace** TypeScript
+version. In VS Code: *TypeScript: Select TypeScript Version* → *Use Workspace Version*.
+Without it, `.sol` imports resolve in the build but show as errors in the editor.
+:::
+
+Full setup instructions, including the other bundlers and the `@tevm/ts-plugin` options, live in
+the [Tevm bundler documentation](https://node.tevm.sh/getting-started/bundler).
+
+## Without the bundler
+
+The bundler is a convenience, not a requirement. Any pipeline that gets you an ABI and bytecode
+works — read `forge build` artifacts, import a JSON ABI, or write the human-readable ABI by
+hand:
+
+```ts
+import { createContract } from '@tevm/contract'
+import artifact from './out/MyToken.sol/MyToken.json' with { type: 'json' }
+
+export const MyToken = createContract({
+  name: 'MyToken',
+  abi: artifact.abi,
+  bytecode: artifact.bytecode.object as `0x${string}`,
+  deployedBytecode: artifact.deployedBytecode.object as `0x${string}`,
+})
+```
+
+:::note
+A JSON import loses literal types, so `createContract` cannot infer method names from it. If you
+want full inference from Foundry artifacts, generate a `.ts` module with `as const` at build
+time — that is exactly what the bundler automates.
+:::

@@ -18,7 +18,11 @@ import type { WriteActionCreator } from './write/WriteActionCreator.js'
  * @example
  * Creating and using a Contract instance:
  * ```typescript
- * import { createContract } from 'tevm/contract'
+ * import { createContract } from '@tevm/contract'
+ * import { createMemoryClient } from 'tevm'
+ *
+ * const client = createMemoryClient()
+ * await client.tevmReady()
  *
  * const MyContract = createContract({
  *   name: 'MyToken',
@@ -31,16 +35,19 @@ import type { WriteActionCreator } from './write/WriteActionCreator.js'
  * })
  *
  * // Read contract state
- * const balanceAction = MyContract.read.balanceOf('0xabcdef...')
- * const balance = await tevm.contract(balanceAction)
+ * const { data: balance } = await client.tevmContract(
+ *   MyContract.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+ * )
  *
  * // Write to contract
- * const transferAction = MyContract.write.transfer('0xfedcba...', 1000n)
- * const result = await tevm.contract(transferAction)
+ * const result = await client.tevmContract(
+ *   MyContract.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+ * )
  *
  * // Create event filter
- * const transferFilter = MyContract.events.Transfer({ fromBlock: 'latest' })
- * const logs = await tevm.eth.getLogs(transferFilter)
+ * const logs = await client.getLogs(
+ *   MyContract.events.Transfer({ fromBlock: 'latest' })
+ * )
  * ```
  *
  * @example
@@ -144,11 +151,32 @@ export type Contract<
 	write: WriteActionCreator<THumanReadableAbi, TAddress, TCode>
 
 	/**
-	 * Action creator for deploying the contract.
+	 * Builds the parameters needed to deploy the contract. Returns `{ abi, bytecode }`, plus
+	 * `args` when the constructor takes arguments. Constructor argument types are inferred from
+	 * the `constructor` entry in the ABI.
+	 *
+	 * Requires the contract to have been created with `bytecode`.
+	 *
+	 * @throws {Error} `Bytecode is required to generate deploy data` if the contract has no
+	 * `bytecode`. This is a runtime check with no type-level guard, so check `contract.bytecode`
+	 * first when building contracts dynamically.
+	 *
 	 * @example
 	 * ```typescript
-	 * const deployAction = MyContract.deploy('Constructor', 'Args')
-	 * const deployedContract = await tevm.contract(deployAction)
+	 * import { SimpleContract } from '@tevm/contract'
+	 * import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+	 *
+	 * const client = createMemoryClient()
+	 * await client.tevmReady()
+	 *
+	 * const result = await client.tevmDeploy({
+	 *   from: PREFUNDED_ACCOUNTS[0].address,
+	 *   ...SimpleContract.deploy(42n),
+	 *   addToMempool: true,
+	 * })
+	 * await client.tevmMine({ blockCount: 1 })
+	 *
+	 * const counter = SimpleContract.withAddress(result.createdAddress)
 	 * ```
 	 */
 	deploy: (
@@ -161,11 +189,23 @@ export type Contract<
 
 	/**
 	 * Adds an address to the contract. All action creators will include
-	 * the address property if added. This method returns a new contract;
+	 * the `address` and `to` properties once added. This method returns a new contract;
 	 * it does not modify the existing contract.
+	 *
+	 * The address is checksummed with `getAddress` before being stored, so `contract.address` is
+	 * always EIP-55 regardless of the casing passed in.
+	 *
+	 * @param {Address} address - The address the contract is deployed at
+	 * @returns {Contract} A new contract instance bound to the address
+	 * @throws {InvalidAddressError} If the address is not a valid Ethereum address.
+	 *
 	 * @example
 	 * ```typescript
-	 * const MyContractWithAddress = MyContract.withAddress('0x1234...')
+	 * import { ERC20 } from '@tevm/contract'
+	 *
+	 * const Dai = ERC20.withAddress('0x6b175474e89094c44da98b954eedeac495271d0f')
+	 * console.log(Dai.address)   // '0x6B175474E89094C44Da98b954EedeAC495271d0F' — checksummed
+	 * console.log(ERC20.address) // undefined — the original is untouched
 	 * ```
 	 */
 	withAddress: <TNewAddress extends Address>(

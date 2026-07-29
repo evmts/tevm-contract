@@ -1,0 +1,184 @@
+---
+title: Reading state
+description: Building type-safe read actions for view and pure functions.
+---
+
+# Reading state
+
+Every `view` and `pure` function in the ABI becomes an action creator on `contract.read`.
+Calling one returns a plain object; it does not touch the network.
+
+## The basics
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: [
+    'function name() view returns (string)',
+    'function balanceOf(address owner) view returns (uint256)',
+    'function allowance(address owner, address spender) view returns (uint256)',
+    'function transfer(address to, uint256 amount) returns (bool)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const action = Dai.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+
+console.log(action.functionName) // 'balanceOf'
+console.log(action.args)         // ['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045']
+console.log(action.address)      // '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+console.log(action.to)           // same value — for viem compatibility
+console.log(action.humanReadableAbi)
+// ['function balanceOf(address owner) view returns (uint256)']
+```
+
+`Dai.read.transfer` does not exist: `transfer` is `nonpayable`, so it is on
+[`.write`](/guides/writing) instead.
+
+```ts
+// @ts-expect-error — Property 'transfer' does not exist on type ReadActionCreator<...>
+Dai.read.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1n)
+```
+
+## Arguments are typed from the ABI
+
+Arguments are positional and typed by `abitype` from the human-readable signature — `address`
+becomes `` `0x${string}` ``, `uint256` becomes `bigint`, `string` becomes `string`, and so on.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: ['function get(string key, uint256 index) view returns (bytes32)'],
+})
+
+C.read.get('hello', 0n)      // ok
+
+// @ts-expect-error — number is not assignable to bigint
+C.read.get('hello', 0)
+
+// @ts-expect-error — Expected 2 arguments, but got 1
+C.read.get('hello')
+```
+
+## Zero-argument functions omit `args`
+
+If a function takes no arguments, the returned object has **no `args` key at all** — not
+`args: []`. viem and wagmi reject an empty `args` array on some paths, so it is omitted rather
+than emptied.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: ['function name() view returns (string)'],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const action = Dai.read.name()
+console.log('args' in action) // false
+```
+
+## Calling the creator vs. using it as a value
+
+Each action creator is *also* an object carrying the same metadata. This is useful when a
+consumer wants the ABI and address but supplies the arguments itself.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: ['function balanceOf(address owner) view returns (uint256)'],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+// As a function — full action, args included
+const withArgs = Dai.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+
+// As a value — abi/address metadata, no args
+console.log(Dai.read.balanceOf.functionName) // 'balanceOf'
+console.log(Dai.read.balanceOf.address)      // '0x6B17...1d0F'
+console.log(Dai.read.balanceOf.abi)          // [{ type: 'function', name: 'balanceOf', ... }]
+```
+
+## Overloads
+
+Overloaded functions produce a single creator whose `abi` includes **every** overload with that
+name, so the decoder can pick the right one. The creator's `humanReadableAbi` still names the
+specific signature the creator was generated from.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: [
+    'function value() view returns (uint256)',
+    'function value(uint256 index) view returns (uint256)',
+  ],
+})
+
+console.log(C.read.value(0n).abi.length) // 2 — both overloads
+```
+
+## Custom errors are attached
+
+Any `error` entries in the ABI are appended to each read action's `abi`. Without them a revert
+would decode as opaque bytes; with them the executor can name the error and its arguments.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Vault = createContract({
+  name: 'Vault',
+  humanReadableAbi: [
+    'function balanceOf(address owner) view returns (uint256)',
+    'error InsufficientBalance(uint256 available, uint256 required)',
+  ],
+})
+
+const action = Vault.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+console.log(action.abi.map((entry) => entry.type))
+// ['function', 'error']
+```
+
+## Executing a read
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createMemoryClient } from 'tevm'
+import { http } from 'viem'
+
+const client = createMemoryClient({
+  fork: { transport: http('https://mainnet.optimism.io')({}) },
+})
+await client.tevmReady()
+
+const Dai = ERC20.withAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1')
+
+const { data } = await client.tevmContract(
+  Dai.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'),
+)
+console.log(data) // bigint
+```
+
+The same action object works with viem's `readContract` — see
+[Using with viem and ethers](/guides/interop).
+
+## Reading without a deployment
+
+`withCode` attaches runtime bytecode to the contract, and every action creator then carries a
+`code` field. An executor that supports it can run the function against that code without a
+deployed account.
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+
+const local = SimpleContract.withCode(SimpleContract.deployedBytecode)
+console.log(local.read.get().code === SimpleContract.deployedBytecode) // true
+```

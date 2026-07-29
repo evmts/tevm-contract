@@ -1,0 +1,157 @@
+---
+title: Events and filters
+description: Building type-safe event filters with contract.events.
+---
+
+# Events and filters
+
+Every `event` in the ABI becomes an action creator on `contract.events`. Calling one returns an
+event-filter object suitable for `eth_getLogs`-style APIs.
+
+## The basics
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: [
+    'function balanceOf(address owner) view returns (uint256)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+    'event Approval(address indexed owner, address indexed spender, uint256 value)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const filter = Dai.events.Transfer({
+  fromBlock: 'latest',
+  toBlock: 'latest',
+})
+
+console.log(filter.eventName) // 'Transfer'
+console.log(filter.address)   // '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+console.log(filter.humanReadableAbi)
+// ['event Transfer(address indexed from, address indexed to, uint256 value)']
+```
+
+## Filtering on indexed arguments
+
+`args` filters on **indexed** event parameters only. The keys available in `args` are derived
+from the ABI, so filtering on a non-indexed parameter is a compile error.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: [
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+// All transfers from one address
+const outgoing = Dai.events.Transfer({
+  args: { from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+  fromBlock: 0n,
+  toBlock: 'latest',
+})
+
+// Transfers between two specific addresses
+const between = Dai.events.Transfer({
+  args: {
+    from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+    to: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  },
+  fromBlock: 0n,
+  toBlock: 'latest',
+})
+
+// @ts-expect-error — `value` is not indexed, so it cannot be filtered on
+Dai.events.Transfer({ args: { value: 1n } })
+```
+
+## Filter parameters
+
+| Parameter | Type | Meaning |
+| --- | --- | --- |
+| `fromBlock` | `BlockNumber \| BlockTag` | First block to search. |
+| `toBlock` | `BlockNumber \| BlockTag` | Last block to search. |
+| `args` | object | Values for indexed parameters. Omitted keys are wildcards. |
+| `strict` | `boolean` | When `true`, only logs whose data matches the ABI exactly are returned; malformed logs are dropped rather than partially decoded. |
+
+Every parameter is optional. Calling the creator with no argument at all yields a filter for
+every occurrence of the event at that address:
+
+```ts
+const all = Dai.events.Transfer()
+```
+
+## Using it as a value
+
+Like read and write creators, an event creator carries its own metadata, which is handy when a
+consumer builds the filter itself:
+
+```ts
+console.log(Dai.events.Transfer.eventName) // 'Transfer'
+console.log(Dai.events.Transfer.abi)       // [{ type: 'event', name: 'Transfer', ... }]
+console.log(Dai.events.Transfer.address)   // '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+```
+
+## A complete round-trip
+
+`SimpleContract` emits `ValueSet(uint256)` on every `set`. Deploy it, write to it, and read the
+log back:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+import { createMemoryClient, PREFUNDED_ACCOUNTS } from 'tevm'
+
+const client = createMemoryClient()
+await client.tevmReady()
+
+const deployResult = await client.tevmDeploy({
+  from: PREFUNDED_ACCOUNTS[0].address,
+  ...SimpleContract.deploy(0n),
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+if (!deployResult.createdAddress) throw new Error('deployment failed')
+const Counter = SimpleContract.withAddress(deployResult.createdAddress)
+
+await client.tevmContract({
+  ...Counter.write.set(42n),
+  from: PREFUNDED_ACCOUNTS[0].address,
+  addToMempool: true,
+})
+await client.tevmMine({ blockCount: 1 })
+
+const logs = await client.getLogs(
+  Counter.events.ValueSet({ fromBlock: 0n, toBlock: 'latest' }),
+)
+
+console.log(logs[0]?.args) // { newValue: 42n }
+```
+
+## Contracts with no events
+
+If the ABI contains no `event` entries, `contract.events` is an empty object rather than
+`undefined` — you can always spread or enumerate it safely.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const C = createContract({
+  name: 'C',
+  humanReadableAbi: ['function get() view returns (uint256)'],
+})
+
+console.log(Object.keys(C.events)) // []
+```
+
+## Bytecode on filters
+
+Event filters also carry `bytecode` and `deployedBytecode` when the contract has them. This
+lets an executor resolve logs for a contract that has not been deployed to a persistent
+address — the same trick `withCode` enables for reads.

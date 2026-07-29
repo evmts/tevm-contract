@@ -1,0 +1,208 @@
+---
+title: Creating a contract
+description: Every way to build a Contract with createContract — human-readable ABIs, JSON ABIs, bytecode, and refinement.
+---
+
+# Creating a contract
+
+`createContract` is the only constructor in this package. It accepts an ABI in one of two
+mutually exclusive forms plus a handful of optional fields, and returns a
+[`Contract`](/api/contract).
+
+## From a human-readable ABI
+
+This is the preferred form. It is shorter, it diffs well, and `abitype` infers argument and
+return types straight from the string literals.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+export const ERC20 = createContract({
+  name: 'ERC20',
+  humanReadableAbi: [
+    'function name() view returns (string)',
+    'function symbol() view returns (string)',
+    'function decimals() view returns (uint8)',
+    'function totalSupply() view returns (uint256)',
+    'function balanceOf(address owner) view returns (uint256)',
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function approve(address spender, uint256 amount) returns (bool)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+    'event Approval(address indexed owner, address indexed spender, uint256 value)',
+  ],
+})
+
+// `amount` is inferred as `bigint`, `to` as `0x${string}` — from the strings above.
+const action = ERC20.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+```
+
+:::warning
+The array must be inferred as a tuple of string literals for this to work. Passing an array
+that has already widened to `string[]` — for example a value read from JSON at runtime, or a
+`const abi: string[] = [...]` annotation — collapses every action creator to `any`. Use
+`as const` if you assign the array to a variable first:
+
+```ts
+const abi = ['function balanceOf(address owner) view returns (uint256)'] as const
+const Token = createContract({ name: 'Token', humanReadableAbi: abi })
+```
+:::
+
+## From a JSON ABI
+
+If you already have a JSON ABI — from `forge build`, from Etherscan, from an existing package —
+pass it as `abi` instead. `createContract` derives `humanReadableAbi` for you with `formatAbi`.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const jsonAbi = [
+  {
+    type: 'function',
+    name: 'balanceOf',
+    inputs: [{ name: 'owner', type: 'address' }],
+    outputs: [{ type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'transfer',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+] as const
+
+export const Token = createContract({ name: 'Token', abi: jsonAbi })
+
+console.log(Token.humanReadableAbi)
+// [
+//   'function balanceOf(address owner) view returns (uint256)',
+//   'function transfer(address to, uint256 amount) returns (bool)'
+// ]
+```
+
+`abi` and `humanReadableAbi` are mutually exclusive — the parameter type is a union, so
+supplying both is a compile error, and supplying neither throws at runtime:
+
+```ts
+import { createContract } from '@tevm/contract'
+
+// @ts-expect-error — neither `abi` nor `humanReadableAbi`
+createContract({ name: 'Broken' })
+// Throws: InvalidParamsError: Must provide either humanReadableAbi or abi
+```
+
+## Adding an address
+
+An address can be supplied up front or attached later. Both produce the same result; which you
+use is a question of where the address is known.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+// Up front
+const Dai = createContract({
+  name: 'Dai',
+  humanReadableAbi: ['function balanceOf(address owner) view returns (uint256)'],
+  address: '0x6b175474e89094c44da98b954eedeac495271d0f',
+})
+
+console.log(Dai.address)
+// '0x6B175474E89094C44Da98b954EedeAC495271d0F'  ← checksummed for you
+```
+
+```ts
+import { createContract } from '@tevm/contract'
+
+// Later, per deployment
+const Token = createContract({
+  name: 'Token',
+  humanReadableAbi: ['function balanceOf(address owner) view returns (uint256)'],
+})
+
+const onMainnet = Token.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+const onOptimism = Token.withAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1')
+```
+
+:::note
+`createContract` runs the address through `getAddress`, so `contract.address` is always
+EIP-55 checksummed regardless of the casing you passed in. An invalid address throws.
+:::
+
+`withAddress` returns a **new** contract; it never mutates the receiver. That is what makes it
+safe to define a contract once at module scope and derive per-chain instances from it.
+
+## Adding bytecode
+
+Three separate bytecode fields exist because they mean three different things:
+
+| Field | Meaning | Used by |
+| --- | --- | --- |
+| `bytecode` | Creation bytecode — the constructor plus the runtime code it returns. | `contract.deploy(...)` |
+| `deployedBytecode` | Runtime code as compiled, without constructor arguments applied. | State setup, `tevmSetAccount` |
+| `code` | Runtime code for this specific instance, i.e. `bytecode` already encoded with constructor arguments. | Attached to every action as `code` |
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Counter = createContract({
+  name: 'Counter',
+  humanReadableAbi: ['function get() view returns (uint256)', 'function set(uint256 newValue)'],
+  bytecode: '0x60806040...',
+  deployedBytecode: '0x60806040...',
+})
+
+// `deploy` needs `bytecode`.
+const deployAction = Counter.deploy(42n)
+
+// `withCode` attaches runtime code so actions can execute without a deployed account.
+const withRuntime = Counter.withCode('0x60806040...')
+console.log(withRuntime.read.get().code)
+// '0x60806040...'
+```
+
+In practice you rarely type bytecode by hand. Either use the
+[prebuilt contracts](/guides/prebuilt-contracts), which ship with real compiled bytecode, or let
+the [bundler](/guides/bundler) fill these fields from the compiler.
+
+:::warning
+`contract.deploy(...)` throws a plain `Error` — `Bytecode is required to generate deploy data` —
+if the contract was created without `bytecode`. There is no type-level guard for this, so if you
+build contracts dynamically, check `contract.bytecode` first.
+:::
+
+## What you get back
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const Counter = createContract({
+  name: 'Counter',
+  humanReadableAbi: [
+    'function get() view returns (uint256)',
+    'function set(uint256 newValue)',
+    'event ValueSet(uint256 newValue)',
+  ],
+})
+
+console.log(Object.keys(Counter))
+// ['name', 'abi', 'humanReadableAbi', 'events', 'write', 'read', 'withCode', 'withAddress', 'deploy']
+
+console.log(Object.keys(Counter.read))   // ['get']    — view/pure only
+console.log(Object.keys(Counter.write))  // ['set']    — payable/nonpayable only
+console.log(Object.keys(Counter.events)) // ['ValueSet']
+```
+
+The `read`/`write` split comes from `stateMutability` in the ABI. Nothing is duplicated between
+them, so `Counter.read.set` does not exist — at the type level or at runtime.
+
+## Next
+
+- [Reading state](/guides/reading)
+- [Writing state](/guides/writing)
+- [Events and filters](/guides/events)
+- [`createContract` reference](/api/create-contract)

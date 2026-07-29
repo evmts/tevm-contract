@@ -1,0 +1,110 @@
+---
+title: How it fits into Tevm
+description: How @tevm/contract relates to the Tevm node, the Tevm bundler, and the other split repositories.
+---
+
+# How it fits into Tevm
+
+Tevm is developed as several independent repositories rather than one monolith.
+`@tevm/contract` is the piece that sits underneath the others.
+
+## The dependency shape
+
+```
+                    ┌─────────────────────┐
+                    │   @tevm/contract    │   ← this repo
+                    │  Contract, createContract,
+                    │  read/write/events action creators
+                    └──────────┬──────────┘
+                               │
+              ┌────────────────┴────────────────┐
+              │                                 │
+   ┌──────────▼──────────┐          ┌───────────▼──────────┐
+   │   Tevm node         │          │   Tevm bundler       │
+   │   tevm,             │          │   @tevm/bundler,     │
+   │   @tevm/memory-client,│        │   @tevm/ts-plugin,   │
+   │   @tevm/actions     │          │   @tevm/compiler     │
+   │                     │          │                      │
+   │   CONSUMES actions  │          │   PRODUCES contracts │
+   └─────────────────────┘          └──────────────────────┘
+```
+
+`@tevm/contract` depends only on `@tevm/utils` (abitype/viem re-exports) and `@tevm/errors`.
+It deliberately does **not** depend on the EVM, on a node, or on a Solidity compiler. Neither
+the node nor the bundler depends on the other.
+
+## The two sides
+
+### The node consumes contracts
+
+`client.tevmContract(action)` accepts an object of the exact shape a `read`/`write` action
+creator returns. That is not a coincidence — the node's parameter types are structurally
+defined against the types in this package.
+
+```ts
+import { ERC20 } from '@tevm/contract'
+import { createMemoryClient } from 'tevm'
+
+const client = createMemoryClient()
+const Dai = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+
+const { data } = await client.tevmContract(Dai.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'))
+console.log(data)
+```
+
+### The bundler produces contracts
+
+The Tevm bundler compiles `.sol` files at import time and emits a module that calls
+`createContract` from this package, filling in `humanReadableAbi`, `bytecode`, and
+`deployedBytecode` from the compiler output. So this:
+
+```ts
+import { MyToken } from './MyToken.sol'
+```
+
+resolves, roughly, to a generated module equivalent to:
+
+```ts
+import { createContract } from '@tevm/contract'
+
+export const MyToken = createContract({
+  name: 'MyToken',
+  humanReadableAbi: ['function balanceOf(address) view returns (uint256)', /* ... */],
+  bytecode: '0x60806040...',
+  deployedBytecode: '0x60806040...',
+})
+```
+
+See [Bundler-generated contracts](/guides/bundler) for the details.
+
+## Why the split
+
+Vendoring this code into either side would create a dependency the other side cannot pay for:
+
+| If it lived in… | The cost |
+| --- | --- |
+| The node repo | The bundler — which runs inside `tsc`, ESLint, Vite, and editors — would transitively pull in a full EVM implementation just to type a contract. |
+| The bundler repo | The node — which is meant to be small enough to run in a browser — would transitively pull in a Solidity compiler toolchain. |
+| Both, duplicated | The `Contract` type would exist twice with structurally-but-not-nominally identical shapes, and every version skew would surface as an inscrutable type error at the boundary. |
+
+Extracting it makes the shared contract explicit and versioned. It is small, has a stable
+surface, and changes rarely — the properties you want in a kernel.
+
+## The repositories
+
+| Repository | Package(s) | Role |
+| --- | --- | --- |
+| [`evmts/tevm-contract`](https://github.com/evmts/tevm-contract) | `@tevm/contract` | This repo. The shared contract kernel. |
+| [`evmts/tevm`](https://github.com/evmts/tevm) | `tevm`, `@tevm/memory-client`, `@tevm/actions`, `@tevm/node` | The EVM node. Docs at [node.tevm.sh](https://node.tevm.sh). |
+| [`evmts/tevm`](https://github.com/evmts/tevm) (bundler packages) | `@tevm/bundler`, `@tevm/ts-plugin`, `@tevm/compiler` | Solidity-import tooling for TypeScript. |
+
+## Versioning
+
+`@tevm/contract` follows the same version line as the rest of Tevm (currently the
+`1.0.0-rc.*` release candidates) and is released with [changesets](https://github.com/changesets/changesets).
+The node and bundler declare a caret range on it, so a patch or minor release of this package
+flows into both without either needing a release.
+
+Because both sides depend on it, a **breaking change here is breaking for the whole project**.
+Type-level changes to `Contract`, `ReadActionCreator`, `WriteActionCreator`, or
+`EventActionCreator` are treated as major even when the runtime behaviour is unchanged.

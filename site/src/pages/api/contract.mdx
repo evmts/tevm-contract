@@ -1,0 +1,190 @@
+---
+title: Contract
+description: API reference for the Contract type.
+---
+
+# `Contract`
+
+```ts
+import type { Contract } from '@tevm/contract'
+```
+
+The object returned by [`createContract`](/api/create-contract). Represents a contract's ABI,
+optional bytecode and address, and the action creators derived from them.
+
+## Type parameters
+
+```ts
+type Contract<
+  TName extends string,
+  THumanReadableAbi extends ReadonlyArray<string>,
+  TAddress extends undefined | Address = undefined,
+  TBytecode extends undefined | Hex = undefined,
+  TDeployedBytecode extends undefined | Hex = undefined,
+  TCode extends undefined | Hex = undefined,
+>
+```
+
+| Parameter | Meaning |
+| --- | --- |
+| `TName` | The contract name. |
+| `THumanReadableAbi` | The human-readable ABI, as a tuple of string literals. |
+| `TAddress` | The configured address, or `undefined`. |
+| `TBytecode` | Creation bytecode, or `undefined`. |
+| `TDeployedBytecode` | Deployed (runtime) bytecode as compiled, or `undefined`. |
+| `TCode` | Runtime bytecode for this instance, or `undefined`. |
+
+The optional parameters are meaningful: `TAddress extends undefined` is what causes action
+creators to omit `address`/`to`, and `TCode extends undefined` is what causes them to omit
+`code`. Narrowing them with `withAddress`/`withCode` changes the action types.
+
+## Properties
+
+### `abi`
+
+`ParseAbi<THumanReadableAbi>` — the parsed JSON ABI.
+
+```ts
+console.log(MyContract.abi)
+// [{ type: 'function', name: 'balanceOf', inputs: [...], outputs: [...], ... }]
+```
+
+### `humanReadableAbi`
+
+`THumanReadableAbi` — the human-readable ABI.
+
+```ts
+console.log(MyContract.humanReadableAbi)
+// ['function balanceOf(address account) view returns (uint256)', ...]
+```
+
+### `name`
+
+`TName | undefined` — the contract name. Informational only; nothing branches on it.
+
+### `address`
+
+`TAddress` — the configured address, EIP-55 checksummed. `undefined` when none was set. Use
+[`withAddress`](#withaddress) to set or change it.
+
+### `bytecode`
+
+`TBytecode` — creation bytecode: the constructor plus the runtime code it returns. Required by
+[`deploy`](#deploy).
+
+### `deployedBytecode`
+
+`TDeployedBytecode` — runtime bytecode as compiled, without constructor arguments applied.
+
+### `code`
+
+`TCode` — runtime bytecode for this specific instance, i.e. creation bytecode already encoded
+with constructor arguments. When present it is attached to every read and write action.
+
+### `read`
+
+[`ReadActionCreator<THumanReadableAbi, TAddress, TCode>`](/api/action-creators#readactioncreator) —
+one action creator per `view`/`pure` function.
+
+```ts
+const balanceAction = MyContract.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+```
+
+### `write`
+
+[`WriteActionCreator<THumanReadableAbi, TAddress, TCode>`](/api/action-creators#writeactioncreator) —
+one action creator per `payable`/`nonpayable` function.
+
+```ts
+const transferAction = MyContract.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', 1000n)
+```
+
+### `events`
+
+[`EventActionCreator<THumanReadableAbi, TBytecode, TDeployedBytecode, TAddress>`](/api/action-creators#eventactioncreator) —
+one filter creator per event. An empty object if the ABI declares no events.
+
+```ts
+const transferFilter = MyContract.events.Transfer({ fromBlock: 'latest' })
+```
+
+## Methods
+
+### `deploy`
+
+```ts
+deploy(...args: ConstructorArgs): EncodeDeployDataParameters<ParseAbi<THumanReadableAbi>>
+```
+
+Returns `{ abi, bytecode }`, plus `args` when the constructor takes arguments. Argument types
+come from the `constructor` entry in the ABI.
+
+**Throws:** `Error('Bytecode is required to generate deploy data')` when the contract has no
+`bytecode`. This is a runtime check with no type-level guard.
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+
+const deployParams = SimpleContract.deploy(42n)
+console.log(deployParams.args) // [42n]
+```
+
+### `withAddress`
+
+```ts
+withAddress<TNewAddress extends Address>(
+  address: TNewAddress,
+): Contract<TName, THumanReadableAbi, TNewAddress, TBytecode, TDeployedBytecode, TCode>
+```
+
+Returns a **new** contract bound to `address`. The receiver is not modified. Every action
+creator on the result includes `address` and `to`.
+
+**Throws:** whatever `getAddress` throws for a malformed address.
+
+```ts
+import { ERC20 } from '@tevm/contract'
+
+const Dai = ERC20.withAddress('0x6b175474e89094c44da98b954eedeac495271d0f')
+console.log(Dai.address)  // '0x6B175474E89094C44Da98b954EedeAC495271d0F' — checksummed
+console.log(ERC20.address) // undefined — the original is untouched
+```
+
+### `withCode`
+
+```ts
+withCode(
+  encodedBytecode: Hex,
+): Contract<TName, THumanReadableAbi, TAddress, TBytecode, TDeployedBytecode, Hex>
+```
+
+Returns a **new** contract whose action creators carry `code`. Lets an executor run functions
+against that bytecode without a deployed account.
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+
+const local = SimpleContract.withCode(SimpleContract.deployedBytecode)
+console.log(local.read.get().code) // '0x6080...'
+```
+
+## Chaining
+
+`withAddress` and `withCode` compose, and each narrows the type:
+
+```ts
+import { SimpleContract } from '@tevm/contract'
+
+const configured = SimpleContract
+  .withAddress('0x1234567890123456789012345678901234567890')
+  .withCode(SimpleContract.deployedBytecode)
+
+const action = configured.read.get()
+console.log(action.address, action.to, action.code)
+```
+
+## See also
+
+- [`createContract`](/api/create-contract)
+- [Action creators](/api/action-creators)
+- [Reading state](/guides/reading), [Writing state](/guides/writing), [Events](/guides/events)

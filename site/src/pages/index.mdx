@@ -1,0 +1,113 @@
+---
+title: What is @tevm/contract?
+description: The type-safe contract kernel shared by the Tevm node and the Tevm bundler.
+---
+
+import { Hero } from '../components/Hero.js'
+import { ActionExplorer } from '../components/ActionExplorer.js'
+import { EcosystemGrid } from '../components/EcosystemGrid.js'
+
+<Hero />
+
+# What is `@tevm/contract`?
+
+`@tevm/contract` turns an ABI into a typed object. That object's `read`, `write`, `events`, and
+`deploy` properties are **pure functions that return plain JavaScript objects** — action objects
+that Tevm, viem, and wagmi all accept directly.
+
+There is no client, no transport, and no network access anywhere in this package. It is types,
+`parseAbi`, and object construction.
+
+```ts
+import { createContract } from '@tevm/contract'
+
+const MyToken = createContract({
+  name: 'MyToken',
+  humanReadableAbi: [
+    'function balanceOf(address account) view returns (uint256)',
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+  ],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const action = MyToken.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+
+console.log(action)
+// {
+//   abi: [{ type: 'function', name: 'balanceOf', ... }],
+//   humanReadableAbi: ['function balanceOf(address account) view returns (uint256)'],
+//   functionName: 'balanceOf',
+//   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+//   to: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+//   args: ['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'],
+// }
+```
+
+Nothing was fetched. Nothing was signed. You hand `action` to whatever executes it.
+
+## Why it exists as its own package
+
+This type surface is the **shared kernel** of the Tevm project. Two halves depend on it, and
+neither can depend on the other:
+
+- The **node** (`tevm`, `@tevm/memory-client`, `@tevm/actions`) *consumes* `Contract` objects.
+  Its `client.tevmContract(action)` entrypoint is typed against the action shapes defined here.
+- The **bundler** (`@tevm/ts-plugin`, `@tevm/bundler`) *produces* `Contract` objects. When you
+  write `import { MyContract } from './MyContract.sol'`, the bundler emits a module that calls
+  `createContract` from this package.
+
+Vendoring it into the node would force the bundler to depend on a whole EVM implementation.
+Vendoring it into the bundler would force the node to depend on a Solidity compiler toolchain.
+So it lives on its own: two runtime dependencies, no side effects, and a surface that changes
+rarely. See [How it fits into Tevm](/ecosystem) for the full picture.
+
+## What you get
+
+:::steps
+
+### Human-readable ABIs
+
+Write `'function balanceOf(address) view returns (uint256)'` instead of forty lines of JSON.
+Argument and return types are inferred from the string literal at compile time via
+[abitype](https://abitype.dev). JSON ABIs work too — see
+[Creating a contract](/guides/creating-contracts).
+
+### Read / write separation
+
+`view` and `pure` functions land on `.read`. `payable` and `nonpayable` functions land on
+`.write`. The split is derived from the ABI's `stateMutability`, so reaching for a
+state-changing function through `.read` is a compile error rather than a runtime surprise.
+
+### Interop by construction
+
+Action objects carry both `address` and `to`, so the same object satisfies Tevm's action API
+and viem's `readContract`/`writeContract` parameters. See
+[Using with viem and ethers](/guides/interop).
+
+### Immutable refinement
+
+`withAddress` and `withCode` return *new* contracts with narrowed types. The original is never
+mutated, so a contract defined once at module scope can be safely reused across chains and
+addresses.
+
+:::
+
+## Try it — action explorer
+
+Every method on a `Contract` is an action creator: call it, and you get plain data back. Pick a
+method to see the exact object it returns and the APIs that accept it.
+
+<ActionExplorer />
+
+## The Tevm family
+
+`@tevm/contract` is one package in the Tevm monorepo. Each package has its own docs site:
+
+<EcosystemGrid />
+
+## Next
+
+- [Getting started](/getting-started) — install and first contract
+- [Creating a contract](/guides/creating-contracts) — every way to build one
+- [API reference](/api/create-contract)
