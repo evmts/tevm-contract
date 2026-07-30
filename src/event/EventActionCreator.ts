@@ -16,6 +16,17 @@ import type {
  * Extracts event arguments from an ABI.
  * @template TAbi - The ABI type, can be an Abi, readonly unknown[], or undefined.
  * @template TEventName - The name of the event, can be a string or undefined.
+ *
+ * @example
+ * ```typescript
+ * import type { MaybeExtractEventArgsFromAbi } from '@tevm/contract'
+ * import type { ParseAbi } from '@tevm/utils'
+ *
+ * type TransferArgs = MaybeExtractEventArgsFromAbi<
+ *   ParseAbi<['event Transfer(address indexed from, address indexed to, uint256 value)']>,
+ *   'Transfer'
+ * >
+ * ```
  */
 export type MaybeExtractEventArgsFromAbi<
 	TAbi extends Abi | readonly unknown[] | undefined,
@@ -29,6 +40,14 @@ export type MaybeExtractEventArgsFromAbi<
 /**
  * Utility type to get the value type of an object.
  * @template T - The object type.
+ *
+ * @example
+ * ```typescript
+ * import type { ValueOf } from '@tevm/contract'
+ *
+ * type Status = ValueOf<{ ready: 'ready'; failed: 'failed' }>
+ * // 'ready' | 'failed'
+ * ```
  */
 export type ValueOf<T> = T[keyof T]
 
@@ -42,15 +61,23 @@ export type ValueOf<T> = T[keyof T]
  *
  * @example
  * ```typescript
- * // Creating an event filter for a Transfer event
- * const filter = MyContract.events.Transfer({
- *   fromBlock: 'latest',
- *   toBlock: 'latest',
- *   args: { from: '0x1234...', to: '0x5678...' }
+ * import { createContract } from '@tevm/contract'
+ *
+ * const Token = createContract({
+ *   humanReadableAbi: [
+ *     'event Transfer(address indexed from, address indexed to, uint256 value)',
+ *   ],
+ *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
  * })
  *
- * // Using the filter with tevm
- * const logs = await tevm.eth.getLogs(filter)
+ * const filter = Token.events.Transfer({
+ *   fromBlock: 'latest',
+ *   toBlock: 'latest',
+ *   args: {
+ *     from: '0x0000000000000000000000000000000000000001',
+ *     to: '0x0000000000000000000000000000000000000002',
+ *   },
+ * })
  * ```
  */
 export type EventActionCreator<

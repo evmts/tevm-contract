@@ -29,7 +29,11 @@ Tevm is developed as several independent repositories rather than one monolith.
    └─────────────────────┘          └──────────────────────┘
 ```
 
-`@tevm/contract` depends only on `@tevm/utils` (abitype/viem re-exports) and `@tevm/errors`.
+`@tevm/contract` depends only on the published `@tevm/utils` compatibility package from Tevm
+core (abitype/viem re-exports) and `@tevm/errors`. `@tevm/utils` is being retired in favour of
+[Voltaire](https://github.com/evmts/voltaire); there is intentionally no standalone
+`tevm-utils` repository. This package will move to Voltaire once that migration is ready.
+
 It deliberately does **not** depend on the EVM, on a node, or on a Solidity compiler. Neither
 the node nor the bundler depends on the other.
 
@@ -97,6 +101,7 @@ surface, and changes rarely — the properties you want in a kernel.
 | [`evmts/tevm-contract`](https://github.com/evmts/tevm-contract) | `@tevm/contract` | This repo. The shared contract kernel. |
 | [`evmts/tevm`](https://github.com/evmts/tevm) | `tevm`, `@tevm/memory-client`, `@tevm/actions`, `@tevm/node` | The EVM node. Docs at [node.tevm.sh](https://node.tevm.sh). |
 | [`evmts/tevm`](https://github.com/evmts/tevm) (bundler packages) | `@tevm/bundler`, `@tevm/ts-plugin`, `@tevm/compiler` | Solidity-import tooling for TypeScript. |
+| [`evmts/voltaire`](https://github.com/evmts/voltaire) | Voltaire packages | Ethereum primitives and cryptography replacing `@tevm/utils`. |
 
 ## Versioning
 

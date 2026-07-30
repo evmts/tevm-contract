@@ -28,17 +28,17 @@ import { formatAbi } from '@tevm/utils'
  *   }
  * ]
  *
- * const events = eventsFactory({ abi })
+ * const events = eventsFactory({ events: abi })
  *
  * // Create a filter for the Transfer event
  * const transferFilter = events.Transfer({
  *   fromBlock: 'latest',
  *   toBlock: 'latest',
- *   args: { from: '0x1234...', to: '0x5678...' }
+ *   args: {
+ *     from: '0x0000000000000000000000000000000000000001',
+ *     to: '0x0000000000000000000000000000000000000002'
+ *   }
  * })
- *
- * // Use the filter with tevm
- * const logs = await tevm.eth.getLogs(transferFilter)
  * ```
  */
 export const eventsFactory = ({ events, bytecode, deployedBytecode, address }) =>

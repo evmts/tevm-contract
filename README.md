@@ -1,7 +1,7 @@
 # @tevm/contract
 
 `@tevm/contract` is Tevm's shared, type-safe contract kernel. It defines the contract surface used by both the
-[Tevm core node](https://github.com/evmts/tevm-monorepo) and Tevm's bundler packages, so contract descriptions and
+[Tevm core node](https://github.com/evmts/tevm) and Tevm's bundler packages, so contract descriptions and
 generated actions have one stable representation across the ecosystem.
 
 This repository is the standalone home of the package formerly maintained at `packages/contract` in the Tevm
@@ -15,6 +15,10 @@ pnpm add @tevm/contract
 
 The package does not require a Tevm node at runtime. Consumers that execute the actions produced here should install
 the appropriate Tevm client separately.
+
+The package temporarily consumes the published `@tevm/utils` compatibility package from Tevm core. That dependency
+will be replaced by [Voltaire](https://github.com/evmts/voltaire); there is intentionally no standalone
+`tevm-utils` repository.
 
 ## Usage
 

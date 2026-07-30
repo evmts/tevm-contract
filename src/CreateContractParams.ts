@@ -13,11 +13,13 @@ import type { Contract } from './Contract.js'
  * @typeParam TDeployedBytecode - The deployed bytecode type (optional)
  * @typeParam TCode - The runtime bytecode type (optional)
  *
- * @see {@link CreateContract}
+ * @see {@link createContract}
  *
  * @example
  * Using human-readable ABI:
  * ```typescript
+ * import type { CreateContractParams } from '@tevm/contract'
+ *
  * const params: CreateContractParams = {
  *   name: 'ERC20',
  *   humanReadableAbi: [
@@ -31,6 +33,8 @@ import type { Contract } from './Contract.js'
  * @example
  * Using JSON ABI:
  * ```typescript
+ * import type { CreateContractParams } from '@tevm/contract'
+ *
  * const params: CreateContractParams = {
  *   name: 'ERC20',
  *   abi: [
@@ -45,6 +49,10 @@ import type { Contract } from './Contract.js'
  *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
  * }
  * ```
+ *
+ * @throws {InvalidParamsError} The `createContract` implementation throws if neither ABI form
+ * is supplied by untyped JavaScript.
+ * @throws {InvalidAddressError} The `createContract` implementation throws if `address` is invalid.
  */
 export type CreateContractParams<
 	TName extends string | undefined | never,

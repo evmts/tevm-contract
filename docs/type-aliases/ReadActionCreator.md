@@ -2,13 +2,13 @@
 
 ***
 
-[@tevm/contract](../globals.md) / ReadActionCreator
+[@tevm/contract](../README.md) / ReadActionCreator
 
 # Type Alias: ReadActionCreator\<THumanReadableAbi, TAddress, TCode, TAddressArgs\>
 
 > **ReadActionCreator**\<`THumanReadableAbi`, `TAddress`, `TCode`, `TAddressArgs`\> = \{ \[TFunctionName in ExtractAbiFunctionNames\<ParseAbi\<THumanReadableAbi\>, "pure" \| "view"\>\]: (args: TArgs) =\> \{ abi: \[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]; functionName: TFunctionName; humanReadableAbi: FormatAbi\<\[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]\> \} & (TCode extends undefined ? \{\} : \{ code: TCode \}) & (TArgs\["length"\] extends 0 ? \{\} : \{ args: TArgs \}) & TAddressArgs & \{ abi: \[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]; functionName: TFunctionName; humanReadableAbi: FormatAbi\<\[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]\> \} & (TCode extends undefined ? \{\} : \{ code: TCode \}) & TAddressArgs \}
 
-Defined in: [read/ReadActionCreator.ts:36](https://github.com/evmts/tevm-monorepo/blob/main/packages/contract/src/read/ReadActionCreator.ts#L36)
+Defined in: [read/ReadActionCreator.ts:40](https://github.com/evmts/tevm-contract/blob/main/src/read/ReadActionCreator.ts#L40)
 
 A mapping of view and pure contract methods to action creators.
 This type provides a way to create type-safe read actions for contract methods.
@@ -25,10 +25,14 @@ This type provides a way to create type-safe read actions for contract methods.
 ## Example
 
 ```typescript
-// Assuming we have a contract with a 'balanceOf' method
-const balanceAction = MyContract.read.balanceOf('0x1234...')
+import { createContract } from '@tevm/contract'
 
-// Use the action with tevm
-const balance = await tevm.contract(balanceAction)
-console.log('Balance:', balance)
+const Token = createContract({
+  humanReadableAbi: ['function balanceOf(address account) view returns (uint256)'],
+  address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+})
+
+const balanceAction = Token.read.balanceOf(
+  '0x0000000000000000000000000000000000000001',
+)
 ```

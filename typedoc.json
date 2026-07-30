@@ -3,6 +3,7 @@
 	"out": "./docs",
 	"entryPoints": ["./src/index.ts"],
 	"plugin": ["typedoc-plugin-markdown"],
+	"readme": "none",
 	"gitRevision": "main",
 	"parametersFormat": "table",
 	"propertiesFormat": "table"

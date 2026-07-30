@@ -8,31 +8,32 @@ description: Install @tevm/contract and build your first type-safe contract.
 ## Install
 
 `@tevm/contract` is published to npm as [`@tevm/contract`](https://www.npmjs.com/package/@tevm/contract).
-The 1.0 line is currently a release candidate.
 
 :::code-group
 
 ```bash [npm]
-npm install @tevm/contract@^1.0.0-rc.151
+npm install @tevm/contract
 ```
 
 ```bash [pnpm]
-pnpm add @tevm/contract@^1.0.0-rc.151
+pnpm add @tevm/contract
 ```
 
 ```bash [bun]
-bun add @tevm/contract@^1.0.0-rc.151
+bun add @tevm/contract
 ```
 
 ```bash [yarn]
-yarn add @tevm/contract@^1.0.0-rc.151
+yarn add @tevm/contract
 ```
 
 :::
 
-`@tevm/utils` and `@tevm/errors` are installed automatically as dependencies — you do not need
-to add them yourself, though importing types from `@tevm/utils` (`Address`, `Hex`, `Abi`) is
-supported and common.
+`@tevm/utils` and `@tevm/errors` are installed automatically as published dependencies — you
+do not need to add them yourself. `@tevm/utils` currently supplies compatibility types such as
+`Address`, `Hex`, and `Abi`, but is being retired in favour of
+[Voltaire](https://voltaire.tevm.sh). Do not depend on a standalone `tevm-utils` repository;
+none is maintained.
 
 :::note
 If you already depend on the `tevm` meta-package, this package is re-exported from it as

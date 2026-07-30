@@ -2,13 +2,13 @@
 
 ***
 
-[@tevm/contract](../globals.md) / createContract
+[@tevm/contract](../README.md) / createContract
 
 # Function: createContract()
 
 > **createContract**\<`TName`, `TAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`, `THumanReadableAbi`\>(`__namedParameters`): [`Contract`](../type-aliases/Contract.md)\<`TName`, `THumanReadableAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`\>
 
-Defined in: [createContract.js:73](https://github.com/evmts/tevm-monorepo/blob/main/packages/contract/src/createContract.js#L73)
+Defined in: [createContract.js:73](https://github.com/evmts/tevm-contract/blob/main/src/createContract.js#L73)
 
 Creates a Tevm Contract instance from a human-readable ABI or JSON ABI.
 This function is the core of Tevm's contract interaction capabilities,
@@ -40,11 +40,19 @@ allowing for type-safe and easy-to-use contract interfaces.
 
 If neither humanReadableAbi nor abi is provided.
 
+## Throws
+
+If `address` is not a valid Ethereum address.
+
+## Throws
+
+If a human-readable ABI item cannot be parsed.
+
 ## Examples
 
 Using a human-readable ABI:
 ```typescript
-import { createContract } from 'tevm/contract'
+import { createContract } from '@tevm/contract'
 
 const contract = createContract({
   name: 'ERC20',
@@ -56,46 +64,44 @@ const contract = createContract({
   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F' // DAI token address
 })
 
-// Read contract state
-const balanceAction = contract.read.balanceOf('0x1234...')
-const balance = await tevm.contract(balanceAction)
-
-// Write to contract
-const transferAction = contract.write.transfer('0x5678...', 1000n)
-const result = await tevm.contract(transferAction)
-
-// Create event filter
-const transferFilter = contract.events.Transfer({ fromBlock: 'latest' })
-const logs = await tevm.eth.getLogs(transferFilter)
+const balanceAction = contract.read.balanceOf(
+  '0x0000000000000000000000000000000000000001',
+)
+const transferAction = contract.write.transfer(
+  '0x0000000000000000000000000000000000000002',
+  1000n,
+)
+const transferFilter = contract.events.Transfer({
+  fromBlock: 'latest',
+  args: { from: contract.address },
+})
 ```
 
 Using a JSON ABI:
 ```typescript
-import { createContract } from 'tevm/contract'
+import { createContract } from '@tevm/contract'
 
 const contract = createContract({
   name: 'ERC20',
   abi: [
     {
-      "inputs": [{"name": "account", "type": "address"}],
-      "name": "balanceOf",
-      "outputs": [{"type": "uint256"}],
-      "stateMutability": "view",
-      "type": "function"
+      inputs: [{ name: 'account', type: 'address' }],
+      name: 'balanceOf',
+      outputs: [{ type: 'uint256' }],
+      stateMutability: 'view',
+      type: 'function',
     },
-    // ... other ABI entries
-  ],
+  ] as const,
   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-  bytecode: '0x60806040...', // Optional: Creation bytecode
-  deployedBytecode: '0x608060405...', // Optional: Deployed bytecode
-  code: '0x608060405...' // Optional: Runtime bytecode
 })
 
-// Use the contract as in the previous example
+const action = contract.read.balanceOf(
+  '0x0000000000000000000000000000000000000001',
+)
 ```
 
 ## See
 
  - [Contract](../type-aliases/Contract.md) for the full API of the returned Contract instance.
- - [https://tevm.sh/learn/contracts/](https://tevm.sh/learn/contracts/) for more information on working with contracts in Tevm.
- - [https://tevm.sh/reference/tevm/contract/types/Contract/](https://tevm.sh/reference/tevm/contract/types/Contract/) for detailed Contract type documentation.
+ - [https://contract.tevm.sh/guides/creating-contracts](https://contract.tevm.sh/guides/creating-contracts) for more information on working with contracts in Tevm.
+ - [https://contract.tevm.sh/api/contract](https://contract.tevm.sh/api/contract) for detailed Contract type documentation.

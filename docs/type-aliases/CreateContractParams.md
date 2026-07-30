@@ -2,13 +2,13 @@
 
 ***
 
-[@tevm/contract](../globals.md) / CreateContractParams
+[@tevm/contract](../README.md) / CreateContractParams
 
 # Type Alias: CreateContractParams\<TName, TAbi, TAddress, TBytecode, TDeployedBytecode, TCode\>
 
 > **CreateContractParams**\<`TName`, `TAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`\> = \{ `abi?`: `never`; `address?`: `TAddress`; `bytecode?`: `TBytecode`; `code?`: `TCode`; `deployedBytecode?`: `TDeployedBytecode`; `humanReadableAbi`: `TAbi` *extends* readonly `string`[] ? `TAbi` : `FormatAbi`\<`TAbi`\>; `name?`: `TName`; \} \| \{ `abi`: `TAbi` *extends* readonly `string`[] ? `ParseAbi`\<`TAbi`\> : `TAbi` *extends* `Abi` ? `TAbi` : `never`; `address?`: `TAddress`; `bytecode?`: `TBytecode`; `code?`: `TCode`; `deployedBytecode?`: `TDeployedBytecode`; `humanReadableAbi?`: `never`; `name?`: `TName`; \}
 
-Defined in: [CreateContractParams.ts:49](https://github.com/evmts/tevm-monorepo/blob/main/packages/contract/src/CreateContractParams.ts#L49)
+Defined in: [CreateContractParams.ts:57](https://github.com/evmts/tevm-contract/blob/main/src/CreateContractParams.ts#L57)
 
 Parameters for creating a [Contract](Contract.md) instance.
 This type allows for two mutually exclusive ways of specifying the ABI:
@@ -119,12 +119,14 @@ Optional name of the contract
 
 ## See
 
-CreateContract
+[createContract](../functions/createContract.md)
 
 ## Examples
 
 Using human-readable ABI:
 ```typescript
+import type { CreateContractParams } from '@tevm/contract'
+
 const params: CreateContractParams = {
   name: 'ERC20',
   humanReadableAbi: [
@@ -137,6 +139,8 @@ const params: CreateContractParams = {
 
 Using JSON ABI:
 ```typescript
+import type { CreateContractParams } from '@tevm/contract'
+
 const params: CreateContractParams = {
   name: 'ERC20',
   abi: [
@@ -151,3 +155,12 @@ const params: CreateContractParams = {
   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
 }
 ```
+
+## Throws
+
+The `createContract` implementation throws if neither ABI form
+is supplied by untyped JavaScript.
+
+## Throws
+
+The `createContract` implementation throws if `address` is invalid.

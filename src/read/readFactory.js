@@ -28,16 +28,15 @@ import { formatAbi } from '@tevm/utils'
  *
  * const readActions = readFactory({
  *   methods: abi,
- *   address: '0x1234...',
- *   code: '0x60806040...'
+ *   errors: [],
+ *   address: '0x0000000000000000000000000000000000000001',
+ *   code: '0x6000'
  * })
  *
  * // Create a read action for the balanceOf function
- * const balanceAction = readActions.balanceOf('0x5678...')
- *
- * // Use the action with tevm
- * const balance = await tevm.contract(balanceAction)
- * console.log('Balance:', balance)
+ * const balanceAction = readActions.balanceOf(
+ *   '0x0000000000000000000000000000000000000002'
+ * )
  * ```
  */
 export const readFactory = ({ methods, errors, address, code }) =>
@@ -75,6 +74,7 @@ export const readFactory = ({ methods, errors, address, code }) =>
 					}
 				}
 				creator.abi = [method]
+				creator.functionName = /** @type {import('@tevm/utils').AbiFunction} */ (method).name
 				creator.humanReadableAbi = formatAbi([method])
 				creator.code = code
 				creator.address = address

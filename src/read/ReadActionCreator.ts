@@ -25,12 +25,16 @@ export type ValueOf<T> = T[keyof T]
  *
  * @example
  * ```typescript
- * // Assuming we have a contract with a 'balanceOf' method
- * const balanceAction = MyContract.read.balanceOf('0x1234...')
+ * import { createContract } from '@tevm/contract'
  *
- * // Use the action with tevm
- * const balance = await tevm.contract(balanceAction)
- * console.log('Balance:', balance)
+ * const Token = createContract({
+ *   humanReadableAbi: ['function balanceOf(address account) view returns (uint256)'],
+ *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+ * })
+ *
+ * const balanceAction = Token.read.balanceOf(
+ *   '0x0000000000000000000000000000000000000001',
+ * )
  * ```
  */
 export type ReadActionCreator<

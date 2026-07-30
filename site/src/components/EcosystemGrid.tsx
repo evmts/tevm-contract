@@ -10,7 +10,7 @@ const SITES: Site[] = [
 	{ name: 'Node', host: 'node.tevm.sh', desc: 'EVM node, memory client & actions' },
 	{ name: 'Contract', host: 'contract.tevm.sh', desc: 'Typed contract kernel', current: true },
 	{ name: 'Bundler', host: 'bundler.tevm.sh', desc: 'Import .sol files in TypeScript' },
-	{ name: 'Utils', host: 'utils.tevm.sh', desc: 'EVM primitives: addresses, hex, ABI' },
+	{ name: 'Voltaire', host: 'voltaire.tevm.sh', desc: 'Ethereum primitives and cryptography' },
 	{ name: 'Logger', host: 'logger.tevm.sh', desc: 'Structured logging for Tevm' },
 	{ name: 'Test', host: 'test.tevm.sh', desc: 'Matchers & fixtures for EVM tests' },
 	{ name: 'Ethers', host: 'ethers.tevm.sh', desc: 'ethers.js adapter for Tevm' },

@@ -2,36 +2,27 @@
 
 ***
 
-<p align="center">
-  <a href="https://tevm.sh/">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/35039927/218812217-92f0f784-cb85-43b9-9ca6-e2b9effd9eb2.png">
-      <img alt="wagmi logo" src="https://user-images.githubusercontent.com/35039927/218812217-92f0f784-cb85-43b9-9ca6-e2b9effd9eb2.png" width="auto" height="300">
-    </picture>
-  </a>
-</p>
+# @tevm/contract
 
-<p align="center">
-  Execute solidity scripts in browser
-</p>
+## Type Aliases
 
-[![CI](https://github.com/evmts/tevm-monorepo/actions/workflows/e2e.yml/badge.svg)](https://github.com/evmts/tevm-monorepo/actions/workflows/e2e.yml)
-[![CI](https://github.com/evmts/tevm-monorepo/actions/workflows/unit.yml/badge.svg)](https://github.com/evmts/tevm-monorepo/actions/workflows/unit.yml)
-<a href="https://www.npmjs.com/package/@tevm/contracts" target="\_parent">
-<img alt="" src="https://img.shields.io/npm/dm/@tevm/contracts.svg" />
-</a>
-<a href="https://bundlephobia.com/package/@tevm/contracts@latest" target="\_parent">
-<img alt="" src="https://badgen.net/bundlephobia/minzip/@tevm/contracts" />
-</a>
+- [Contract](type-aliases/Contract.md)
+- [CreateContractFn](type-aliases/CreateContractFn.md)
+- [CreateContractParams](type-aliases/CreateContractParams.md)
+- [EventActionCreator](type-aliases/EventActionCreator.md)
+- [MaybeExtractEventArgsFromAbi](type-aliases/MaybeExtractEventArgsFromAbi.md)
+- [ReadActionCreator](type-aliases/ReadActionCreator.md)
+- [ValueOf](type-aliases/ValueOf.md)
+- [WriteActionCreator](type-aliases/WriteActionCreator.md)
 
-# tevm-monorepo
+## Variables
 
-tevm enables direct evm execution clientside with forge cheat codes and direct solidity file imports.
+- [AdvancedContract](variables/AdvancedContract.md)
+- [ERC20](variables/ERC20.md)
+- [ERC721](variables/ERC721.md)
+- [ErrorContract](variables/ErrorContract.md)
+- [SimpleContract](variables/SimpleContract.md)
 
-## Visit [Docs](https://tevm.sh/) for docs, guides, API and more!
+## Functions
 
-## See [Tevm Beta project board](https://github.com/orgs/tevm/projects/1) for progress on the upcoming beta release
-
-## License 📄
-
-<a href="_media/LICENSE"><img src="https://user-images.githubusercontent.com/35039927/231030761-66f5ce58-a4e9-4695-b1fe-255b1bceac92.png" width="200" /></a>
+- [createContract](functions/createContract.md)

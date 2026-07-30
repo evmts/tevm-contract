@@ -5,7 +5,8 @@ export default defineConfig({
 		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
 		environment: 'node',
 		coverage: {
-			include: ['src/**/*.js'],
+			exclude: ['src/**/*.spec.ts', 'src/test/**'],
+			include: ['src/**/*.{js,ts}'],
 			provider: 'v8',
 			reporter: ['text', 'json-summary', 'json'],
 			thresholds: {

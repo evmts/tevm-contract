@@ -31,16 +31,16 @@ import { formatAbi } from '@tevm/utils'
  *
  * const writeActions = writeFactory({
  *   methods: abi,
- *   address: '0x1234...',
- *   code: '0x60806040...'
+ *   errors: [],
+ *   address: '0x0000000000000000000000000000000000000001',
+ *   code: '0x6000'
  * })
  *
  * // Create a write action for the transfer function
- * const transferAction = writeActions.transfer('0x5678...', 1000n)
- *
- * // Use the action with tevm
- * const result = await tevm.contract(transferAction)
- * console.log('Transaction hash:', result.transactionHash)
+ * const transferAction = writeActions.transfer(
+ *   '0x0000000000000000000000000000000000000002',
+ *   1000n
+ * )
  * ```
  */
 export const writeFactory = ({ methods, errors, address, code }) =>
@@ -79,6 +79,7 @@ export const writeFactory = ({ methods, errors, address, code }) =>
 					}
 				}
 				creator.abi = [method]
+				creator.functionName = /** @type {import('@tevm/utils').AbiFunction} */ (method).name
 				creator.humanReadableAbi = formatAbi([method])
 				creator.code = code
 				creator.address = address

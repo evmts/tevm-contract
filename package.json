@@ -50,6 +50,7 @@
 		"build": "pnpm run clean:build && pnpm run build:dist && pnpm run build:types",
 		"build:dist": "tsup",
 		"build:types": "tsup --dts-only && tsc --project tsconfig.build.json --emitDeclarationOnly",
+		"check:package": "publint && attw --pack .",
 		"changeset": "changeset",
 		"clean:build": "rm -rf dist types",
 		"docs": "typedoc",
@@ -69,10 +70,12 @@
 		"@tevm/utils": "^1.0.0-next.148"
 	},
 	"devDependencies": {
+		"@arethetypeswrong/cli": "^0.18.5",
 		"@biomejs/biome": "^2.4.15",
 		"@changesets/changelog-github": "^0.7.0",
 		"@changesets/cli": "^2.31.0",
 		"@vitest/coverage-v8": "^4.1.6",
+		"publint": "^0.3.22",
 		"tsup": "^8.5.1",
 		"typedoc": "^0.28.19",
 		"typedoc-plugin-markdown": "^4.11.0",

@@ -28,15 +28,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -48,7 +48,7 @@ jobs:
         run: pnpm docs:build
 
       - name: Upload build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docs-dist
           path: site/dist/public
@@ -66,15 +66,15 @@ jobs:
       url: https://contract.tevm.sh
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -85,10 +85,10 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN is not set; skipping deploy."
-            exit 0
+          if [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ] || [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_ORG_ID, VERCEL_PROJECT_ID, and VERCEL_TOKEN are required."
+            exit 1
           fi
-          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN" --cwd site
-          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN" --cwd site
-          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN" --cwd site
+          npx --yes vercel@58.4.0 pull --yes --environment=production --token="$VERCEL_TOKEN" --cwd site
+          npx --yes vercel@58.4.0 build --prod --token="$VERCEL_TOKEN" --cwd site
+          npx --yes vercel@58.4.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN" --cwd site

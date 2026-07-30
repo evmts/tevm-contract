@@ -4,7 +4,7 @@ export default defineConfig({
 	title: 'Tevm Contract',
 	titleTemplate: '%s · Tevm Contract',
 	description: 'The type-safe contract kernel shared by the Tevm node and the Tevm bundler.',
-	baseUrl: process.env['VERCEL_ENV'] === 'production' ? 'https://contract.tevm.sh' : process.env['VERCEL_URL'],
+	baseUrl: 'https://contract.tevm.sh',
 	rootDir: '.',
 	// vocs 2.x renders with Waku/RSC by default. This site is pure content, so
 	// pre-render everything and ship it as static files.
@@ -36,7 +36,7 @@ export default defineConfig({
 				{ text: 'Node', link: 'https://node.tevm.sh' },
 				{ text: 'Contract', link: 'https://contract.tevm.sh' },
 				{ text: 'Bundler', link: 'https://bundler.tevm.sh' },
-				{ text: 'Utils', link: 'https://utils.tevm.sh' },
+				{ text: 'Voltaire', link: 'https://voltaire.tevm.sh' },
 				{ text: 'Logger', link: 'https://logger.tevm.sh' },
 				{ text: 'Test', link: 'https://test.tevm.sh' },
 				{ text: 'Ethers', link: 'https://ethers.tevm.sh' },

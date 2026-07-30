@@ -16,9 +16,9 @@ import type { CreateContractParams } from './CreateContractParams.js'
  * @example
  * Using a human readable ABI:
  * ```typescript
- * import { type Contract, createContract } from 'tevm/contract'
+ * import { createContract } from '@tevm/contract'
  *
- * const contract: Contract = createContract({
+ * const contract = createContract({
  *   name: 'ERC20',
  *   humanReadableAbi: [
  *     'function balanceOf(address owner) view returns (uint256)',
@@ -29,50 +29,32 @@ import type { CreateContractParams } from './CreateContractParams.js'
  * ```
  *
  * @example
- * Using a JSON ABI (needs to be formatted):
+ * Using a JSON ABI:
  * ```typescript
- * import { type Contract, createContract } from 'tevm/contract'
- * import { formatAbi } from '@tevm/utils'
+ * import { createContract } from '@tevm/contract'
  *
  * const jsonAbi = [
  *   {
- *     "inputs": [{"name": "owner", "type": "address"}],
- *     "name": "balanceOf",
- *     "outputs": [{"type": "uint256"}],
- *     "stateMutability": "view",
- *     "type": "function"
- *   },
- *   {
- *     "inputs": [
- *       {"name": "to", "type": "address"},
- *       {"name": "amount", "type": "uint256"}
- *     ],
- *     "name": "transfer",
- *     "outputs": [{"type": "bool"}],
- *     "stateMutability": "nonpayable",
- *     "type": "function"
- *   },
- *   {
- *     "anonymous": false,
- *     "inputs": [
- *       {"indexed": true, "name": "from", "type": "address"},
- *       {"indexed": true, "name": "to", "type": "address"},
- *       {"indexed": false, "name": "value", "type": "uint256"}
- *     ],
- *     "name": "Transfer",
- *     "type": "event"
+ *     inputs: [{ name: 'owner', type: 'address' }],
+ *     name: 'balanceOf',
+ *     outputs: [{ type: 'uint256' }],
+ *     stateMutability: 'view',
+ *     type: 'function',
  *   }
- * ]
+ * ] as const
  *
  * const contract = createContract({
  *   name: 'ERC20',
- *   abi: formatAbi(jsonAbi),
+ *   abi: jsonAbi,
  *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',  // DAI token address on Ethereum mainnet
- *   bytecode: '0x60806040526000805534801561001457600080fd5b50610771806100246000396000f3fe',  // Example bytecode (truncated)
- *   deployedBytecode: '0x608060405234801561001057600080fd5b50600436106100885760003560e01c806370a082311161005b57806370a08231146101bc', // Example deployed bytecode (truncated)
- *   code: '0x608060405234801561001057600080fd5b50600436106100885760003560e01c806370a082311161005b57806370a08231146101bc',  // Example runtime code (truncated)
  * })
+ *
+ * const action = contract.read.balanceOf('0x0000000000000000000000000000000000000001')
  * ```
+ *
+ * @throws {InvalidParamsError} If neither `humanReadableAbi` nor `abi` is supplied at runtime.
+ * @throws {InvalidAddressError} If `address` is not a valid Ethereum address.
+ * @throws {Error} If a human-readable ABI item cannot be parsed.
  */
 export type CreateContractFn = <
 	TName extends string,

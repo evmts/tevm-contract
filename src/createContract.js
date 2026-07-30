@@ -11,11 +11,13 @@ import { writeFactory } from './write/writeFactory.js'
  *
  * @type {import('./CreateContractFn.js').CreateContractFn}
  * @throws {InvalidParamsError} If neither humanReadableAbi nor abi is provided.
+ * @throws {InvalidAddressError} If `address` is not a valid Ethereum address.
+ * @throws {Error} If a human-readable ABI item cannot be parsed.
  *
  * @example
  * Using a human-readable ABI:
  * ```typescript
- * import { createContract } from 'tevm/contract'
+ * import { createContract } from '@tevm/contract'
  *
  * const contract = createContract({
  *   name: 'ERC20',
@@ -27,43 +29,41 @@ import { writeFactory } from './write/writeFactory.js'
  *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F' // DAI token address
  * })
  *
- * // Read contract state
- * const balanceAction = contract.read.balanceOf('0x1234...')
- * const balance = await tevm.contract(balanceAction)
- *
- * // Write to contract
- * const transferAction = contract.write.transfer('0x5678...', 1000n)
- * const result = await tevm.contract(transferAction)
- *
- * // Create event filter
- * const transferFilter = contract.events.Transfer({ fromBlock: 'latest' })
- * const logs = await tevm.eth.getLogs(transferFilter)
+ * const balanceAction = contract.read.balanceOf(
+ *   '0x0000000000000000000000000000000000000001',
+ * )
+ * const transferAction = contract.write.transfer(
+ *   '0x0000000000000000000000000000000000000002',
+ *   1000n,
+ * )
+ * const transferFilter = contract.events.Transfer({
+ *   fromBlock: 'latest',
+ *   args: { from: contract.address },
+ * })
  * ```
  *
  * @example
  * Using a JSON ABI:
  * ```typescript
- * import { createContract } from 'tevm/contract'
+ * import { createContract } from '@tevm/contract'
  *
  * const contract = createContract({
  *   name: 'ERC20',
  *   abi: [
  *     {
- *       "inputs": [{"name": "account", "type": "address"}],
- *       "name": "balanceOf",
- *       "outputs": [{"type": "uint256"}],
- *       "stateMutability": "view",
- *       "type": "function"
+ *       inputs: [{ name: 'account', type: 'address' }],
+ *       name: 'balanceOf',
+ *       outputs: [{ type: 'uint256' }],
+ *       stateMutability: 'view',
+ *       type: 'function',
  *     },
- *     // ... other ABI entries
- *   ],
+ *   ] as const,
  *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
- *   bytecode: '0x60806040...', // Optional: Creation bytecode
- *   deployedBytecode: '0x608060405...', // Optional: Deployed bytecode
- *   code: '0x608060405...' // Optional: Runtime bytecode
  * })
  *
- * // Use the contract as in the previous example
+ * const action = contract.read.balanceOf(
+ *   '0x0000000000000000000000000000000000000001',
+ * )
  * ```
  *
  * @see {@link Contract} for the full API of the returned Contract instance.

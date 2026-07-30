@@ -36,7 +36,7 @@ const _AdvancedContract = {
  * external call, and a `delegatecall`. Useful for testing call tracing, opcode hooks, and
  * multi-type ABI encoding without needing a Solidity toolchain.
  *
- * Its constructor deploys a {@link MathHelper} as a side effect, so it also covers
+ * Its constructor deploys an internal `MathHelper` as a side effect, so it also covers
  * contract-creation-during-construction.
  *
  * Ships with real compiled `bytecode` and `deployedBytecode` but no `address` — call

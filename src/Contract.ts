@@ -53,8 +53,14 @@ import type { WriteActionCreator } from './write/WriteActionCreator.js'
  * @example
  * Using with other libraries:
  * ```typescript
+ * import { createContract } from '@tevm/contract'
  * import { createPublicClient, http } from 'viem'
  * import { mainnet } from 'viem/chains'
+ *
+ * const MyContract = createContract({
+ *   humanReadableAbi: ['function balanceOf(address account) view returns (uint256)'],
+ *   address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+ * })
  *
  * const client = createPublicClient({
  *   chain: mainnet,
@@ -62,7 +68,7 @@ import type { WriteActionCreator } from './write/WriteActionCreator.js'
  * })
  *
  * const balance = await client.readContract(
- *   MyContract.read.balanceOf('0xabcdef...')
+ *   MyContract.read.balanceOf('0x0000000000000000000000000000000000000001')
  * )
  * ```
  */
@@ -84,8 +90,10 @@ export type Contract<
 	 * The JSON ABI of the contract.
 	 * @example
 	 * ```typescript
-	 * console.log(MyContract.abi)
-	 * // [{name: 'balanceOf', inputs: [...], outputs: [...], ...}]
+	 * import { ERC20 } from '@tevm/contract'
+	 *
+	 * console.log(ERC20.abi.find((item) => item.type === 'function' && item.name === 'balanceOf'))
+	 * // { name: 'balanceOf', inputs: [...], outputs: [...], ... }
 	 * ```
 	 */
 	abi: ParseAbi<THumanReadableAbi>
@@ -109,8 +117,10 @@ export type Contract<
 	 * The human-readable ABI of the contract.
 	 * @example
 	 * ```typescript
-	 * console.log(MyContract.humanReadableAbi)
-	 * // ['function balanceOf(address): uint256', ...]
+	 * import { ERC20 } from '@tevm/contract'
+	 *
+	 * console.log(ERC20.humanReadableAbi)
+	 * // ['constructor(string name, string symbol)', ...]
 	 * ```
 	 */
 	humanReadableAbi: THumanReadableAbi
@@ -124,8 +134,11 @@ export type Contract<
 	 * Action creators for events. Used to create event filters in a type-safe way.
 	 * @example
 	 * ```typescript
-	 * const transferFilter = MyContract.events.Transfer({ from: '0x1234...' })
-	 * const logs = await tevm.eth.getLogs(transferFilter)
+	 * import { ERC20 } from '@tevm/contract'
+	 *
+	 * const transferFilter = ERC20.events.Transfer({
+	 *   args: { from: '0x0000000000000000000000000000000000000001' },
+	 * })
 	 * ```
 	 */
 	events: EventActionCreator<THumanReadableAbi, TBytecode, TDeployedBytecode, TAddress>
@@ -134,8 +147,12 @@ export type Contract<
 	 * Action creators for contract view and pure functions.
 	 * @example
 	 * ```typescript
-	 * const balanceAction = MyContract.read.balanceOf('0x1234...')
-	 * const balance = await tevm.contract(balanceAction)
+	 * import { ERC20 } from '@tevm/contract'
+	 *
+	 * const token = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+	 * const balanceAction = token.read.balanceOf(
+	 *   '0x0000000000000000000000000000000000000001',
+	 * )
 	 * ```
 	 */
 	read: ReadActionCreator<THumanReadableAbi, TAddress, TCode>
@@ -144,8 +161,13 @@ export type Contract<
 	 * Action creators for contract payable and nonpayable functions.
 	 * @example
 	 * ```typescript
-	 * const transferAction = MyContract.write.transfer('0x5678...', 1000n)
-	 * const result = await tevm.contract(transferAction)
+	 * import { ERC20 } from '@tevm/contract'
+	 *
+	 * const token = ERC20.withAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F')
+	 * const transferAction = token.write.transfer(
+	 *   '0x0000000000000000000000000000000000000001',
+	 *   1000n,
+	 * )
 	 * ```
 	 */
 	write: WriteActionCreator<THumanReadableAbi, TAddress, TCode>
@@ -176,6 +198,7 @@ export type Contract<
 	 * })
 	 * await client.tevmMine({ blockCount: 1 })
 	 *
+	 * if (!result.createdAddress) throw new Error('deployment failed')
 	 * const counter = SimpleContract.withAddress(result.createdAddress)
 	 * ```
 	 */
@@ -219,24 +242,11 @@ export type Contract<
 	 * @returns {Contract} A new contract instance with updated code
 	 * @example
 	 * ```typescript
-	 * import { createPublicClient, http } from 'viem'
-	 * import { mainnet } from 'viem/chains'
+	 * import { SimpleContract } from '@tevm/contract'
 	 *
-	 * const client = createPublicClient({
-	 *   chain: mainnet,
-	 *   transport: http()
-	 * })
-	 *
-	 * const ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
-	 * const UpdatedContract = Contract.withCode('0x60806040...')
-	 * const {data, abi, code, args} = UpdatedContract.read.balanceOf('0x1234567890123456789012345678901234567890')
-	 * const balance = await client.call({
-	 *   to: ADDRESS,
-	 *   data,
-	 *   abi,
-	 *   code,
-	 *   args
-	 * })
+	 * const local = SimpleContract.withCode('0x6000')
+	 * const action = local.read.get()
+	 * console.log(action.code) // '0x6000'
 	 * ```
 	 */
 	withCode: (encodedBytecode: Hex) => Contract<TName, THumanReadableAbi, TAddress, TBytecode, TDeployedBytecode, Hex>
