@@ -3,10 +3,11 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"lib": ["ESNext"],
+		"types": ["node"],
 		"ignoreDeprecations": "6.0",
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"rootDir": "src",
+		"rootDir": ".",
 		"outDir": "types",
 		"declaration": true,
 		"declarationMap": true,
@@ -31,6 +32,6 @@
 		"strict": true,
 		"verbatimModuleSyntax": true
 	},
-	"include": ["src", "src/**/*.json"],
+	"include": ["src", "bench"],
 	"exclude": ["src/common/**/*"]
 }

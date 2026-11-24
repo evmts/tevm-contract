@@ -17,7 +17,7 @@ optional bytecode and address, and the action creators derived from them.
 ```ts
 type Contract<
   TName extends string,
-  THumanReadableAbi extends ReadonlyArray<string>,
+  TAbi extends Abi | readonly string[],
   TAddress extends undefined | Address = undefined,
   TBytecode extends undefined | Hex = undefined,
   TDeployedBytecode extends undefined | Hex = undefined,
@@ -28,7 +28,7 @@ type Contract<
 | Parameter | Meaning |
 | --- | --- |
 | `TName` | The contract name. |
-| `THumanReadableAbi` | The human-readable ABI, as a tuple of string literals. |
+| `TAbi` | A JSON ABI or a human-readable ABI tuple. |
 | `TAddress` | The configured address, or `undefined`. |
 | `TBytecode` | Creation bytecode, or `undefined`. |
 | `TDeployedBytecode` | Deployed (runtime) bytecode as compiled, or `undefined`. |
@@ -42,7 +42,7 @@ creators to omit `address`/`to`, and `TCode extends undefined` is what causes th
 
 ### `abi`
 
-`ParseAbi<THumanReadableAbi>` — the parsed JSON ABI.
+`TAbi` for JSON input, or `ParseAbi<TAbi>` for human-readable input.
 
 ```ts
 console.log(MyContract.abi)
@@ -51,7 +51,7 @@ console.log(MyContract.abi)
 
 ### `humanReadableAbi`
 
-`THumanReadableAbi` — the human-readable ABI.
+The original human-readable ABI tuple or the formatted JSON ABI.
 
 ```ts
 console.log(MyContract.humanReadableAbi)
@@ -83,7 +83,7 @@ with constructor arguments. When present it is attached to every read and write 
 
 ### `read`
 
-[`ReadActionCreator<THumanReadableAbi, TAddress, TCode>`](/api/action-creators#readactioncreator) —
+[`ReadActionCreator<HumanReadableAbi<TAbi>, TAddress, TCode>`](/api/action-creators#readactioncreator) —
 one action creator per `view`/`pure` function.
 
 ```ts
@@ -92,7 +92,7 @@ const balanceAction = MyContract.read.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E5341
 
 ### `write`
 
-[`WriteActionCreator<THumanReadableAbi, TAddress, TCode>`](/api/action-creators#writeactioncreator) —
+[`WriteActionCreator<HumanReadableAbi<TAbi>, TAddress, TCode>`](/api/action-creators#writeactioncreator) —
 one action creator per `payable`/`nonpayable` function.
 
 ```ts
@@ -101,7 +101,7 @@ const transferAction = MyContract.write.transfer('0xd8dA6BF26964aF9D7eEd9e03E534
 
 ### `events`
 
-[`EventActionCreator<THumanReadableAbi, TBytecode, TDeployedBytecode, TAddress>`](/api/action-creators#eventactioncreator) —
+[`EventActionCreator<TAbi, TBytecode, TDeployedBytecode, TAddress>`](/api/action-creators#eventactioncreator) —
 one filter creator per event. An empty object if the ABI declares no events.
 
 ```ts
@@ -113,7 +113,7 @@ const transferFilter = MyContract.events.Transfer({ fromBlock: 'latest' })
 ### `deploy`
 
 ```ts
-deploy(...args: ConstructorArgs): EncodeDeployDataParameters<ParseAbi<THumanReadableAbi>>
+deploy(...args: ConstructorArgs): EncodeDeployDataParameters<Contract<TName, TAbi>['abi']>
 ```
 
 Returns `{ abi, bytecode }`, plus `args` when the constructor takes arguments. Argument types
@@ -134,7 +134,7 @@ console.log(deployParams.args) // [42n]
 ```ts
 withAddress<TNewAddress extends Address>(
   address: TNewAddress,
-): Contract<TName, THumanReadableAbi, TNewAddress, TBytecode, TDeployedBytecode, TCode>
+): Contract<TName, TAbi, TNewAddress, TBytecode, TDeployedBytecode, TCode>
 ```
 
 Returns a **new** contract bound to `address`. The receiver is not modified. Every action
@@ -155,7 +155,7 @@ console.log(ERC20.address) // undefined — the original is untouched
 ```ts
 withCode(
   encodedBytecode: Hex,
-): Contract<TName, THumanReadableAbi, TAddress, TBytecode, TDeployedBytecode, Hex>
+): Contract<TName, TAbi, TAddress, TBytecode, TDeployedBytecode, Hex>
 ```
 
 Returns a **new** contract whose action creators carry `code`. Lets an executor run functions

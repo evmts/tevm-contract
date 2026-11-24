@@ -42,5 +42,11 @@ jobs:
       - name: Validate published package
         run: pnpm check:package
 
-      - name: Test with coverage
+      - name: Unit and fuzz tests with coverage
         run: pnpm test:coverage
+
+      - name: Test built package end to end
+        run: pnpm test:e2e
+
+      - name: Run benchmarks
+        run: pnpm bench

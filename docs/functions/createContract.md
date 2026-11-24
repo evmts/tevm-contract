@@ -6,9 +6,9 @@
 
 # Function: createContract()
 
-> **createContract**\<`TName`, `TAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`, `THumanReadableAbi`\>(`__namedParameters`): [`Contract`](../type-aliases/Contract.md)\<`TName`, `THumanReadableAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`\>
+> **createContract**\<`TName`, `TAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`, `THumanReadableAbi`\>(`__namedParameters`): [`Contract`](../type-aliases/Contract.md)\<`TName`, `Extract`\<`TAbi`\[`number`\], \{ `anonymous`: `true`; `type`: `"event"`; \}\> *extends* `never` ? `THumanReadableAbi` : `TAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`\>
 
-Defined in: [createContract.js:73](https://github.com/evmts/tevm-contract/blob/main/src/createContract.js#L73)
+Defined in: [src/createContract.js:73](https://github.com/evmts/tevm-contract/blob/main/src/createContract.js#L73)
 
 Creates a Tevm Contract instance from a human-readable ABI or JSON ABI.
 This function is the core of Tevm's contract interaction capabilities,
@@ -34,7 +34,7 @@ allowing for type-safe and easy-to-use contract interfaces.
 
 ## Returns
 
-[`Contract`](../type-aliases/Contract.md)\<`TName`, `THumanReadableAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`\>
+[`Contract`](../type-aliases/Contract.md)\<`TName`, `Extract`\<`TAbi`\[`number`\], \{ `anonymous`: `true`; `type`: `"event"`; \}\> *extends* `never` ? `THumanReadableAbi` : `TAbi`, `TAddress`, `TBytecode`, `TDeployedBytecode`, `TCode`\>
 
 ## Throws
 

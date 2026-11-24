@@ -8,7 +8,7 @@
 
 > **MaybeExtractEventArgsFromAbi**\<`TAbi`, `TEventName`\> = `TAbi` *extends* `Abi` \| readonly `unknown`[] ? `TEventName` *extends* `string` ? `GetEventArgs`\<`TAbi`, `TEventName`\> : `undefined` : `undefined`
 
-Defined in: [event/EventActionCreator.ts:31](https://github.com/evmts/tevm-contract/blob/main/src/event/EventActionCreator.ts#L31)
+Defined in: [src/event/EventActionCreator.ts:31](https://github.com/evmts/tevm-contract/blob/main/src/event/EventActionCreator.ts#L31)
 
 Extracts event arguments from an ABI.
 

@@ -1,4 +1,4 @@
-import { formatAbi } from '@tevm/utils'
+import { functionActions } from '../functionActions.js'
 
 /**
  * Creates read action creators from contract parameters.
@@ -8,8 +8,8 @@ import { formatAbi } from '@tevm/utils'
  * @param {object} params - The parameters for creating read action creators.
  * @param {import('@tevm/utils').Abi} params.methods - The ABI of the contract methods.
  * @param {import('@tevm/utils').Abi} params.errors - The ABI of the contract errors.
- * @param {import('@tevm/utils').Hex} [params.code] - The runtime bytecode of the contract (optional).
- * @param {import('@tevm/utils').Address} [params.address] - The address of the deployed contract (optional).
+ * @param {import('@tevm/utils').Hex | undefined} [params.code] - The runtime bytecode of the contract (optional).
+ * @param {import('@tevm/utils').Address | undefined} [params.address] - The address of the deployed contract (optional).
  * @returns {import('./ReadActionCreator.js').ReadActionCreator<any, any, any>} An object containing read action creators for each view and pure function in the ABI.
  *
  * @example
@@ -39,46 +39,4 @@ import { formatAbi } from '@tevm/utils'
  * )
  * ```
  */
-export const readFactory = ({ methods, errors, address, code }) =>
-	Object.fromEntries(
-		methods
-			.filter(({ type }) => type === 'function')
-			.filter((method) => {
-				const abiFunction = /** @type {import('@tevm/utils').AbiFunction} */ (method)
-				return abiFunction.stateMutability === 'view' || abiFunction.stateMutability === 'pure'
-			})
-			.map((method) => {
-				/**
-				 * Creates a read action for a specific contract method.
-				 * @param {...any} args - The arguments for the contract method.
-				 * @returns {object} An object representing the read action, including ABI and method information.
-				 */
-				const creator = (...args) => {
-					// Handle case where there is an overload
-					// TODO: make this more efficient
-					const methodAbi = methods
-						.filter(
-							(m) =>
-								/**@type {import('@tevm/utils').AbiFunction}*/ (m).name ===
-								/**@type {import('@tevm/utils').AbiFunction}*/ (method).name,
-						)
-						.concat(errors)
-					const maybeArgs = args.length > 0 ? { args } : {}
-					return {
-						abi: methodAbi,
-						humanReadableAbi: formatAbi([method]),
-						functionName: /**@type {import('@tevm/utils').AbiFunction}*/ (method).name,
-						...(code !== undefined ? { code } : {}),
-						...(address !== undefined ? { address, to: address } : {}),
-						...maybeArgs,
-					}
-				}
-				creator.abi = [method]
-				creator.functionName = /** @type {import('@tevm/utils').AbiFunction} */ (method).name
-				creator.humanReadableAbi = formatAbi([method])
-				creator.code = code
-				creator.address = address
-				creator.to = address
-				return [/**@type {import('@tevm/utils').AbiFunction}*/ (method).name, creator]
-			}),
-	)
+export const readFactory = (params) => functionActions(params, ['pure', 'view'])

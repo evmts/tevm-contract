@@ -155,3 +155,9 @@ console.log(Object.keys(C.events)) // []
 Event filters also carry `bytecode` and `deployedBytecode` when the contract has them. This
 lets an executor resolve logs for a contract that has not been deployed to a persistent
 address — the same trick `withCode` enables for reads.
+
+## Anonymous events
+
+Supply the compiler’s JSON ABI for an anonymous event. Its filter retains the
+`anonymous: true` flag on the event ABI item, so the client can distinguish anonymous
+events when matching log topics.

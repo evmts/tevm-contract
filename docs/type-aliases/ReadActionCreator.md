@@ -6,9 +6,9 @@
 
 # Type Alias: ReadActionCreator\<THumanReadableAbi, TAddress, TCode, TAddressArgs\>
 
-> **ReadActionCreator**\<`THumanReadableAbi`, `TAddress`, `TCode`, `TAddressArgs`\> = \{ \[TFunctionName in ExtractAbiFunctionNames\<ParseAbi\<THumanReadableAbi\>, "pure" \| "view"\>\]: (args: TArgs) =\> \{ abi: \[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]; functionName: TFunctionName; humanReadableAbi: FormatAbi\<\[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]\> \} & (TCode extends undefined ? \{\} : \{ code: TCode \}) & (TArgs\["length"\] extends 0 ? \{\} : \{ args: TArgs \}) & TAddressArgs & \{ abi: \[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]; functionName: TFunctionName; humanReadableAbi: FormatAbi\<\[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName\>\]\> \} & (TCode extends undefined ? \{\} : \{ code: TCode \}) & TAddressArgs \}
+> **ReadActionCreator**\<`THumanReadableAbi`, `TAddress`, `TCode`, `TAddressArgs`\> = \{ \[TFunctionName in ExtractAbiFunctionNames\<ParseAbi\<THumanReadableAbi\>, "pure" \| "view"\>\]: (args: TArgs) =\> \{ abi: readonly \[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName, "pure" \| "view"\>, ...(...)\[\]\]; functionName: TFunctionName; humanReadableAbi: FormatAbi\<\[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName, "pure" \| "view"\>\]\> \} & (TCode extends undefined ? \{\} : \{ code: TCode \}) & (TArgs\["length"\] extends 0 ? \{\} : \{ args: TArgs \}) & TAddressArgs & \{ abi: readonly \[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName, "pure" \| "view"\>\]; functionName: TFunctionName; humanReadableAbi: FormatAbi\<\[ExtractAbiFunction\<ParseAbi\<THumanReadableAbi\>, TFunctionName, "pure" \| "view"\>\]\> \} & (TCode extends undefined ? \{\} : \{ code: TCode \}) & TAddressArgs \}
 
-Defined in: [read/ReadActionCreator.ts:40](https://github.com/evmts/tevm-contract/blob/main/src/read/ReadActionCreator.ts#L40)
+Defined in: [src/read/ReadActionCreator.ts:40](https://github.com/evmts/tevm-contract/blob/main/src/read/ReadActionCreator.ts#L40)
 
 A mapping of view and pure contract methods to action creators.
 This type provides a way to create type-safe read actions for contract methods.

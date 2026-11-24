@@ -4,7 +4,10 @@
 	"entryPoints": ["./src/index.ts"],
 	"plugin": ["typedoc-plugin-markdown"],
 	"readme": "none",
-	"gitRevision": "main",
+	"disableGit": true,
+	"basePath": ".",
+	"intentionallyNotExported": ["HumanReadableAbi", "JsonAbi"],
+	"sourceLinkTemplate": "https://github.com/evmts/tevm-contract/blob/main/src/{path}#L{line}",
 	"parametersFormat": "table",
 	"propertiesFormat": "table"
 }

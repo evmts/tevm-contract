@@ -46,6 +46,10 @@ describe(eventsFactory.name, () => {
 		`)
 	})
 
+	it('creates an unfiltered event action without parameters', () => {
+		expect(contract.events.exampleEvent()).toEqual(contract.events.exampleEvent({}))
+	})
+
 	it('should return an empty object when the provided abi includes no events', () => {
 		expect(Object.keys(contractNoEvent.events)).toHaveLength(0)
 	})

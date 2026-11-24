@@ -74,9 +74,9 @@ export const createContract = ({
 	name,
 	humanReadableAbi: _humanReadableAbi,
 	abi: _abi,
-	address,
+	address: initialAddress,
 	deployedBytecode,
-	code,
+	code: initialCode,
 	bytecode,
 }) => {
 	const { abi, humanReadableAbi } = (() => {
@@ -91,75 +91,40 @@ export const createContract = ({
 		})
 	})()
 
-	const methods = abi.filter((field) => {
-		return field.type === 'function'
-	})
-	const events = abi.filter((field) => {
-		return field.type === 'event'
-	})
-	const errors = abi.filter((field) => {
-		return field.type === 'error'
-	})
-	const optionalArgs = {
-		...(address !== undefined ? { address: getAddress(address) } : {}),
+	const methods = abi.filter((item) => item.type === 'function')
+	const events = abi.filter((item) => item.type === 'event')
+	const errors = abi.filter((item) => item.type === 'error')
+
+	/**
+	 * Reuse the ABI and its partitions when binding a new address or code.
+	 * @param {import('@tevm/utils').Address | undefined} address
+	 * @param {import('@tevm/utils').Hex | undefined} code
+	 */
+	const build = (address, code) => ({
+		name,
+		abi,
+		humanReadableAbi,
+		...(address !== undefined ? { address } : {}),
 		...(code !== undefined ? { code } : {}),
 		...(bytecode !== undefined ? { bytecode } : {}),
 		...(deployedBytecode !== undefined ? { deployedBytecode } : {}),
-	}
-	const baseContract = {
-		...optionalArgs,
-		name,
-		abi: abi,
-		humanReadableAbi,
-		// TODO make this more internally typesafe
-		events: eventsFactory({ events, ...optionalArgs }),
-		// TODO make this more internally typesafe
-		write: writeFactory({ methods, errors, ...optionalArgs }),
-		// TODO make this more internally typesafe
-		read: readFactory({ methods, errors, address, ...optionalArgs }),
-	}
-	/**
-	 * @param {import('@tevm/utils').Address} address
-	 */
-	const withAddress = (address) => {
-		const formattedAddress = getAddress(address)
-		return createContract(
-			/** @type {any}*/ ({
-				...baseContract,
-				address: formattedAddress,
-			}),
-		)
-	}
-
-	/**
-	 * @param {import('@tevm/utils').Hex} encodedBytecode
-	 */
-	const withCode = (encodedBytecode) => {
-		return createContract(
-			/** @type {any} */ ({
-				...baseContract,
-				code: encodedBytecode,
-			}),
-		)
-	}
-
-	return /**@type any*/ ({
-		...baseContract,
-		withCode,
-		withAddress,
-		/**
-		 * @param {Array<any>} args
-		 */
+		events: eventsFactory({ events, bytecode, deployedBytecode, address }),
+		write: writeFactory({ methods, errors, address, code }),
+		read: readFactory({ methods, errors, address, code }),
+		/** @param {import('@tevm/utils').Hex} nextCode */
+		withCode: (nextCode) => build(address, nextCode),
+		/** @param {import('@tevm/utils').Address} nextAddress */
+		withAddress: (nextAddress) => build(getAddress(nextAddress), code),
+		/** @param {Array<unknown>} args */
 		deploy: (...args) => {
-			const maybeArgs = args.length > 0 ? { args } : {}
-			if (!baseContract.bytecode) {
-				throw new Error('Bytecode is required to generate deploy data')
-			}
+			if (!bytecode) throw new Error('Bytecode is required to generate deploy data')
 			return {
-				...maybeArgs,
-				bytecode: baseContract.bytecode,
+				...(args.length > 0 ? { args } : {}),
+				bytecode,
 				abi,
 			}
 		},
 	})
+
+	return /** @type {any} */ (build(initialAddress === undefined ? undefined : getAddress(initialAddress), initialCode))
 }

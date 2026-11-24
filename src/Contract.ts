@@ -1,7 +1,10 @@
-import type { Address, EncodeDeployDataParameters, Hex, ParseAbi } from '@tevm/utils'
+import type { Abi, Address, EncodeDeployDataParameters, FormatAbi, Hex, ParseAbi } from '@tevm/utils'
 import type { EventActionCreator } from './event/EventActionCreator.js'
 import type { ReadActionCreator } from './read/ReadActionCreator.js'
 import type { WriteActionCreator } from './write/WriteActionCreator.js'
+
+type HumanReadableAbi<TAbi extends Abi | readonly string[]> = TAbi extends readonly string[] ? TAbi : FormatAbi<TAbi>
+type JsonAbi<TAbi extends Abi | readonly string[]> = TAbi extends readonly string[] ? ParseAbi<TAbi> : TAbi
 
 /**
  * Represents a specific contract with its ABI and optional bytecode.
@@ -9,7 +12,7 @@ import type { WriteActionCreator } from './write/WriteActionCreator.js'
  * including read and write methods, event filtering, and deployment.
  *
  * @template TName - The name of the contract
- * @template THumanReadableAbi - The human-readable ABI of the contract
+ * @template TAbi - The JSON or human-readable ABI of the contract
  * @template TAddress - The address of the contract (optional)
  * @template TBytecode - The creation bytecode of the contract (optional)
  * @template TDeployedBytecode - The deployed bytecode of the contract (optional)
@@ -74,7 +77,7 @@ import type { WriteActionCreator } from './write/WriteActionCreator.js'
  */
 export type Contract<
 	TName extends string,
-	THumanReadableAbi extends ReadonlyArray<string>,
+	TAbi extends Abi | readonly string[],
 	TAddress extends undefined | Address = undefined,
 	TBytecode extends undefined | Hex = undefined,
 	TDeployedBytecode extends undefined | Hex = undefined,
@@ -87,7 +90,7 @@ export type Contract<
 	address: TAddress
 
 	/**
-	 * The JSON ABI of the contract.
+	 * The JSON ABI. Human-readable input is parsed into JSON.
 	 * @example
 	 * ```typescript
 	 * import { ERC20 } from '@tevm/contract'
@@ -96,7 +99,7 @@ export type Contract<
 	 * // { name: 'balanceOf', inputs: [...], outputs: [...], ... }
 	 * ```
 	 */
-	abi: ParseAbi<THumanReadableAbi>
+	abi: JsonAbi<TAbi>
 
 	/**
 	 * The runtime bytecode of the contract, encoded with constructor arguments.
@@ -114,7 +117,7 @@ export type Contract<
 	deployedBytecode: TDeployedBytecode
 
 	/**
-	 * The human-readable ABI of the contract.
+	 * The human-readable ABI. JSON input is formatted as Solidity signatures.
 	 * @example
 	 * ```typescript
 	 * import { ERC20 } from '@tevm/contract'
@@ -123,7 +126,7 @@ export type Contract<
 	 * // ['constructor(string name, string symbol)', ...]
 	 * ```
 	 */
-	humanReadableAbi: THumanReadableAbi
+	humanReadableAbi: HumanReadableAbi<TAbi>
 
 	/**
 	 * The name of the contract. If imported, this will match the name of the contract import.
@@ -141,7 +144,7 @@ export type Contract<
 	 * })
 	 * ```
 	 */
-	events: EventActionCreator<THumanReadableAbi, TBytecode, TDeployedBytecode, TAddress>
+	events: EventActionCreator<TAbi, TBytecode, TDeployedBytecode, TAddress>
 
 	/**
 	 * Action creators for contract view and pure functions.
@@ -155,7 +158,7 @@ export type Contract<
 	 * )
 	 * ```
 	 */
-	read: ReadActionCreator<THumanReadableAbi, TAddress, TCode>
+	read: ReadActionCreator<HumanReadableAbi<TAbi>, TAddress, TCode>
 
 	/**
 	 * Action creators for contract payable and nonpayable functions.
@@ -170,7 +173,7 @@ export type Contract<
 	 * )
 	 * ```
 	 */
-	write: WriteActionCreator<THumanReadableAbi, TAddress, TCode>
+	write: WriteActionCreator<HumanReadableAbi<TAbi>, TAddress, TCode>
 
 	/**
 	 * Builds the parameters needed to deploy the contract. Returns `{ abi, bytecode }`, plus
@@ -203,17 +206,16 @@ export type Contract<
 	 * ```
 	 */
 	deploy: (
-		...args: EncodeDeployDataParameters<ParseAbi<THumanReadableAbi>> extends { args: infer TArgs }
+		...args: EncodeDeployDataParameters<JsonAbi<TAbi>> extends { args: infer TArgs }
 			? TArgs extends ReadonlyArray<any>
 				? TArgs
 				: []
 			: []
-	) => EncodeDeployDataParameters<ParseAbi<THumanReadableAbi>>
+	) => EncodeDeployDataParameters<JsonAbi<TAbi>>
 
 	/**
-	 * Adds an address to the contract. All action creators will include
-	 * the `address` and `to` properties once added. This method returns a new contract;
-	 * it does not modify the existing contract.
+	 * Adds an address to the contract. Read and write actions include `address` and `to`,
+	 * and event filter actions include `address`. The method returns a new contract.
 	 *
 	 * The address is checksummed with `getAddress` before being stored, so `contract.address` is
 	 * always EIP-55 regardless of the casing passed in.
@@ -233,7 +235,7 @@ export type Contract<
 	 */
 	withAddress: <TNewAddress extends Address>(
 		address: TNewAddress,
-	) => Contract<TName, THumanReadableAbi, TNewAddress, TBytecode, TDeployedBytecode, TCode>
+	) => Contract<TName, TAbi, TNewAddress, TBytecode, TDeployedBytecode, TCode>
 
 	/**
 	 * Updates the bytecode of the contract.
@@ -249,5 +251,5 @@ export type Contract<
 	 * console.log(action.code) // '0x6000'
 	 * ```
 	 */
-	withCode: (encodedBytecode: Hex) => Contract<TName, THumanReadableAbi, TAddress, TBytecode, TDeployedBytecode, Hex>
+	withCode: (encodedBytecode: Hex) => Contract<TName, TAbi, TAddress, TBytecode, TDeployedBytecode, Hex>
 }

@@ -1,5 +1,5 @@
 import { formatAbi, type Hex, parseAbi } from '@tevm/utils'
-import { assertType, describe, expect, it } from 'vitest'
+import { assertType, describe, expect, expectTypeOf, it } from 'vitest'
 import type { Contract } from './Contract.js'
 import { createContract } from './createContract.js'
 import { dummyAbi } from './test/fixtures.js'
@@ -33,6 +33,29 @@ describe(createContract.name, () => {
 
 	it('should contain the ABI', () => {
 		expect(contract.abi).toEqual(parseAbi(formatAbi(dummyAbi)))
+	})
+
+	it('preserves the anonymous flag in contract types emitted with a JSON ABI', () => {
+		const abi = [
+			{ type: 'event', name: 'Hidden', anonymous: true, inputs: [] },
+			...parseAbi(['function get(uint256) view returns (string)', 'function set(string)', 'constructor(string)']),
+		] as const
+		type Generated = Contract<'Example', typeof abi>
+		expectTypeOf<Generated['abi']>().toEqualTypeOf<typeof abi>()
+		expectTypeOf<Generated['humanReadableAbi'][0]>().toEqualTypeOf<'event Hidden()'>()
+		expectTypeOf<Generated['events']['Hidden']['abi'][0]['anonymous']>().toEqualTypeOf<true>()
+		expectTypeOf<ReturnType<Generated['withAddress']>['abi']>().toEqualTypeOf<typeof abi>()
+		expectTypeOf<ReturnType<Generated['withCode']>['abi']>().toEqualTypeOf<typeof abi>()
+		const example = createContract({ name: 'Example', abi })
+		expectTypeOf(example.events.Hidden.abi[0].anonymous).toEqualTypeOf<true>()
+		const filter = example.events.Hidden({})
+		expectTypeOf(filter.abi[0].anonymous).toEqualTypeOf<true>()
+		expect(filter.abi).toEqual([abi[0]])
+		expectTypeOf(example.read.get(1n).functionName).toEqualTypeOf<'get'>()
+		expectTypeOf(example.write.set('value').functionName).toEqualTypeOf<'set'>()
+		expectTypeOf<[string]>().not.toExtend<Parameters<typeof example.read.get>>()
+		expectTypeOf<[bigint]>().not.toExtend<Parameters<typeof example.write.set>>()
+		expectTypeOf(example.deploy).parameters.toEqualTypeOf<[string]>()
 	})
 
 	it('should generate human readable ABI', () => {
@@ -405,5 +428,64 @@ describe(createContract.name, () => {
 		})
 		const updatedContract = contract.withCode('0xabcdef')
 		expect(updatedContract.code).toBe('0xabcdef')
+	})
+
+	it('preserves ABI partitions, overloaded actions, events, and metadata across withAddress and withCode', () => {
+		const address = `0x${'11'.repeat(20)}` as const
+		const contract = createContract({
+			abi: dummyAbi,
+			name: 'DummyContract',
+			bytecode: '0x6001',
+			deployedBytecode: '0x6002',
+		})
+
+		// Unconfigured contract omits address/to and omits args when none are passed.
+		const bareRead = contract.read.exampleReadNoArgs()
+		expect(bareRead).not.toHaveProperty('args')
+		expect(bareRead).not.toHaveProperty('address')
+		expect(bareRead).not.toHaveProperty('to')
+		expect(contract.read.overloadedRead().abi.filter((entry) => entry.type === 'function')).toHaveLength(2)
+		expect(contract.write.overloadedWrite().abi.filter((entry) => entry.type === 'function')).toHaveLength(2)
+		expect(contract.write.overloadedWrite()).not.toHaveProperty('args')
+		expect(contract.events.exampleEvent({})).toMatchObject({
+			eventName: 'exampleEvent',
+			bytecode: '0x6001',
+			deployedBytecode: '0x6002',
+		})
+
+		// withAddress and withCode preserve parsed ABI/metadata and propagate to read/write/event creators.
+		const addressed = contract.withAddress(address)
+		const withCode = addressed.withCode('0x6003')
+		expect(addressed.abi).toBe(contract.abi)
+		expect(addressed.humanReadableAbi).toBe(contract.humanReadableAbi)
+		expect(withCode.address).toBe(address)
+		expect(withCode.code).toBe('0x6003')
+		expect(withCode.read.exampleRead('hi', 1n)).toMatchObject({
+			address,
+			to: address,
+			code: '0x6003',
+			args: ['hi', 1n],
+		})
+		expect(withCode.write.exampleWrite('hi', 2n)).toMatchObject({
+			address,
+			to: address,
+			code: '0x6003',
+			args: ['hi', 2n],
+		})
+		expect(withCode.events.exampleEvent({})).toMatchObject({
+			address,
+			eventName: 'exampleEvent',
+			bytecode: '0x6001',
+			deployedBytecode: '0x6002',
+		})
+
+		// Mutating one returned action does not leak into subsequent calls.
+		const firstWrite = withCode.write.overloadedWrite('a') as unknown as { functionName: string; abi: unknown[] }
+		firstWrite.functionName = 'mutated'
+		firstWrite.abi.length = 0
+		const secondWrite = withCode.write.overloadedWrite('b')
+		expect(secondWrite.functionName).toBe('overloadedWrite')
+		expect(secondWrite.abi).toHaveLength(2)
+		expect(contract.address).toBeUndefined()
 	})
 })

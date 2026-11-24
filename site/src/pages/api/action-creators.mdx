@@ -31,14 +31,16 @@ type ReadActionCreator<
 ```
 
 Maps every `view` and `pure` function name in the ABI to an action creator. Each creator is
-both callable and an object carrying the same metadata.
+callable and also carries metadata. For an overloaded name, the creator’s own ABI and
+formatted signature describe the last matching declaration. The returned action’s readonly ABI
+includes all matching overloads.
 
 **Calling it returns:**
 
 | Key | Present when | Value |
 | --- | --- | --- |
 | `functionName` | always | The function name, as a literal type. |
-| `abi` | always | The matching function entries plus every `error` entry in the ABI. |
+| `abi` | always | Every view or pure overload with that name, followed by the contract’s custom errors. |
 | `humanReadableAbi` | always | The single formatted signature. |
 | `args` | the function takes ≥1 argument | The arguments, typed from the ABI. |
 | `address`, `to` | `TAddress` is not `undefined` | The contract address, twice, for Tevm/viem compatibility. |
@@ -62,8 +64,7 @@ console.log(C.read.balanceOf.address)      // '0x6B17…1d0F'
 ```
 
 :::note
-When a function takes no arguments, the `args` key is **absent**, not `[]`. viem and wagmi
-reject an empty `args` array on some paths.
+A call with no arguments omits the `args` key. This keeps the action compatible with viem and wagmi.
 :::
 
 Full guide: [Reading state](/guides/reading).
@@ -79,9 +80,8 @@ type WriteActionCreator<
 >
 ```
 
-Identical in shape to `ReadActionCreator`, but maps `payable` and `nonpayable` functions
-instead. The returned object carries no transaction options — no `from`, `value`, `gas`, or
-`nonce`. Those belong to the executor.
+Maps `payable` and `nonpayable` functions. The returned ABI includes those
+overloads and the contract’s custom errors. Supply transaction options to the executor.
 
 ```ts
 import { createContract } from '@tevm/contract'
@@ -101,7 +101,7 @@ Full guide: [Writing state](/guides/writing).
 
 ```ts
 type EventActionCreator<
-  THumanReadableAbi extends readonly string[],
+  TSourceAbi extends Abi | readonly string[],
   TBytecode extends Hex | undefined,
   TDeployedBytecode extends Hex | undefined,
   TAddress extends Address | undefined,
