@@ -1,5 +1,13 @@
 # @tevm/contract
 
+## 1.0.0
+
+### Patch Changes
+
+- [`6b42dc4`](https://github.com/evmts/tevm-contract/commit/6b42dc4c41408ee2377a3a4343e1b7de62b08449) Thanks [@roninjin10](https://github.com/roninjin10)! - Expose functionName on read and write creators, keep their overloads separate, include custom errors and all eligible overloads in action ABI types, and retain anonymous event metadata from JSON ABIs. Reuse the parsed ABI when binding an address or code, and cache overload grouping and ABI formatting when constructing actions.
+
+- [`fbaf4c3`](https://github.com/evmts/tevm-contract/commit/fbaf4c36fcc9ccfe645d25eb0e899e5bf877cd4a) Thanks [@roninjin10](https://github.com/roninjin10)! - Move the shared Tevm contract kernel into its standalone repository with independent build, test, and release tooling.
+
 ## 1.0.0-rc.151
 
 ### Patch Changes
@@ -22,6 +30,7 @@
 ### Patch Changes
 
 - 826c7fa: - **New Features**
+
   - Improved error messages for contract call failures by decoding and displaying detailed revert reasons, including custom errors and panic codes.
   - Added a comprehensive revert reason decoder to provide clearer explanations for contract execution failures.
   - Error responses now include more context and human-readable explanations when contract execution fails.
@@ -226,6 +235,7 @@
 - [#1209](https://github.com/evmts/tevm-monorepo/pull/1209) [`6469208`](https://github.com/evmts/tevm-monorepo/commit/646920872b48bb48984b104c2e3960d31b4ecb0a) Thanks [@roninjin10](https://github.com/roninjin10)! - Added code property for better compatability with new deployless calls from viem
 
 - [#1211](https://github.com/evmts/tevm-monorepo/pull/1211) [`f51ef40`](https://github.com/evmts/tevm-monorepo/commit/f51ef4007f53b2ca6d4ebff770104d9e9f462ea3) Thanks [@roninjin10](https://github.com/roninjin10)! - Big revamp of tevm contracts
+
   - Now can pass in an address at construction time. Along with bytecode options.
   - createScript and Script are removed in favor of Contract covering both use cases
   - Contracts now automatically will encode constructor args and optionally contract args
@@ -266,6 +276,7 @@
 ### Patch Changes
 
 - [#1186](https://github.com/evmts/tevm-monorepo/pull/1186) [`7765446`](https://github.com/evmts/tevm-monorepo/commit/7765446beec1391a00f3d3dd8d015d5205e0371a) Thanks [@roninjin10](https://github.com/roninjin10)! - Moved files around to colocate code better. Some packages are disappearing
+
   - Tevm/Zod is now part of Tevm/actions
   - Tevm/actions-types moved to Tevm/actions
   - Tevm/procedures-types moved to Tevm/procedures
@@ -389,6 +400,7 @@
 ### Patch Changes
 
 - [#862](https://github.com/evmts/tevm-monorepo/pull/862) [`f217fa4dc2f730cc109940ef36872229ae9f26d3`](https://github.com/evmts/tevm-monorepo/commit/f217fa4dc2f730cc109940ef36872229ae9f26d3) Thanks [@roninjin10](https://github.com/roninjin10)! - - Renamed MemoryTevm MemoryClient
+
   - Renamed TevmClient HttpClient
   - Replaced @tevm/actions-types package with @tevm/actions-types, @tevm/client-types, and @tevm/procedures-types packages
   - Moved errors to @tevm/errors
@@ -403,6 +415,7 @@
 ### Major Changes
 
 - [#828](https://github.com/evmts/tevm-monorepo/pull/828) [`3b5f6729`](https://github.com/evmts/tevm-monorepo/commit/3b5f67291550b590dda16471059a05bd10fe324d) Thanks [@roninjin10](https://github.com/roninjin10)! - - Changed name of `TevmContract` to `Contract`
+
   - Changed name of `createTevmContract` to `createContract`
   - Added `Script` to be a Contract with bytecode
   - Removed bytecode from `Contract`
@@ -424,7 +437,7 @@
 
   ```typescript
   client.readContract(
-    Erc20Contract.withAddress(contractAddress).read.balanceOf(userAddress),
+    Erc20Contract.withAddress(contractAddress).read.balanceOf(userAddress)
   );
   ```
 

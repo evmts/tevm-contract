@@ -1,6 +1,6 @@
 {
 	"name": "@tevm/contract",
-	"version": "1.0.0-rc.151",
+	"version": "1.0.0",
 	"description": "The shared type-safe contract kernel used by Tevm's core node and bundler.",
 	"keywords": [
 		"ethereum",
